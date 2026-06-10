@@ -10,7 +10,7 @@ import itertools
 @st.cache_data
 def load_clean_data():
     """Carga el CSV de datos limpios proveniente de Colab."""
-    df = pd.read_csv("data/data.csv")
+    df = pd.read_csv("Data/data.csv")
     df['year'] = df['year'].astype(int)
     return df
 
