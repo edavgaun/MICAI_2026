@@ -18,7 +18,31 @@ The analysis is based on:
 - Co-authorship networks  
 - Institution-level aggregation  
 - Country normalization  
-- Temporal segmentation of AI development eras  
+- Temporal segmentation of AI development eras
+
+🧱 Project Structure
+mexican-ai-ecosystem/
+│
+├── app.py
+├── requirements.txt
+├── README.md
+│
+├── data/
+│   └── metadata_extraida.csv
+│
+├── src/
+│   ├── data_loader.py
+│   ├── preprocessing.py
+│   ├── network.py
+│   ├── visualization.py
+│
+├── assets/
+│   └── (imagenes, logos si quieres)
+│
+└── pages/
+    ├── 1_Overview.py
+    ├── 2_Network.py
+    ├── 3_Institutions.py
 
 ---
 
