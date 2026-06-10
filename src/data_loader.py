@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-DATA_PATH = "data/metadata_extraida.csv"
+DATA_PATH = "Data/metadata_extraida.csv"
 
 @st.cache_data
 def load_data():
