@@ -1,13 +1,10 @@
 import pandas as pd
 import streamlit as st
 
-DATA_PATH = "Data/data.csv"
-
 @st.cache_data
 def load_data():
-    df = pd.read_csv(DATA_PATH)
-
-    df.sort_values(by="image_file", inplace=True)
-    df.reset_index(drop=True, inplace=True)
-
+    # Ruta relativa apuntando a tu carpeta data/
+    df = pd.read_csv("Data/data.csv")
+    # Asegúrate de que el año sea entero
+    df['year'] = df['year'].astype(int)
     return df
