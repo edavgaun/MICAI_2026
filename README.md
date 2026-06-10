@@ -46,7 +46,7 @@ mexican-ai-ecosystem/
     ├── 1_Overview.py
     ├── 2_Network.py
     └── 3_Institutions.py
-
+```
 
 ---
 
