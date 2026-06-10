@@ -21,6 +21,9 @@ The analysis is based on:
 - Temporal segmentation of AI development eras
 
 🧱 Project Structure
+## 🧱 Project Structure
+
+```text
 mexican-ai-ecosystem/
 │
 ├── app.py
@@ -34,7 +37,7 @@ mexican-ai-ecosystem/
 │   ├── data_loader.py
 │   ├── preprocessing.py
 │   ├── network.py
-│   ├── visualization.py
+│   └── visualization.py
 │
 ├── assets/
 │   └── (imagenes, logos si quieres)
@@ -42,7 +45,8 @@ mexican-ai-ecosystem/
 └── pages/
     ├── 1_Overview.py
     ├── 2_Network.py
-    ├── 3_Institutions.py
+    └── 3_Institutions.py
+
 
 ---
 
