@@ -35,7 +35,7 @@ def show_header(text_title):
     """Muestra el título de la página y los créditos académicos del proyecto."""
     st.title(text_title)
     st.caption("📘 Based on: Edgar Avalos-Gauna (2026), *Evolution of the Mexican AI Ecosystem*")
-    st.caption("Avalos-Gauna, E. (2026). *Tracing Institutional Collaboration and Temporal Dynamics Across the Mexican AI Landscape*. Proceedings of the Mexican International Conference on Artificial Intelligence (MICAI).")
+    st.caption("Avalos-Gauna, E. (2026). *Tracing Institutional Collaboration and Temporal Dynamics Across the Mexican AI Landscape*. Proceedings of the Mexican International Conference on Artificial Intelligence (MICAI, 2026).")
 
 
 def show_main_instructions():
