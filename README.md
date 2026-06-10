@@ -68,14 +68,6 @@ The dataset is derived from:
 
 ---
 
-## 🚀 How to Run the App
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/mexican-ai-ecosystem.git
-cd mexican-ai-ecosystem
-
 
 👤 Author
 Edgar Avalos Gauna, Rice University
