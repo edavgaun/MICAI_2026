@@ -24,6 +24,11 @@ pos = nx.spring_layout(G, seed=42, k=1.5, iterations=200)
 
 # node sizes simple placeholder
 degree = dict(G.degree())
+
+labels = {
+    n: n for n, d in degree.items() if d >= 4
+}
+
 node_sizes = [degree.get(n, 1) * 50 for n in G.nodes()]
 
 node_colors = ["green" if "UNAM" in n else "lightblue" for n in G.nodes()]
