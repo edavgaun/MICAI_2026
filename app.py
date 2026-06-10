@@ -8,4 +8,4 @@ show_main_instructions()
 
 # Carga de datos limpia y sin desconfianzas
 df = load_clean_data()
-st.sidebar.success(f"📈 Dataset listo: {df.shape[0]} registros.")
+st.sidebar.success(f"📈 Dataset listo: {df.shape[0]} papers analizados.")
