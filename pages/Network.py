@@ -5,9 +5,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.lines import Line2D
 
-# Importamos la carga de datos del setup y los cálculos matemáticos de tu utilería de red
-from pages.Ecosystem_Setup import load_clean_data
-from pages.Network_Utils import build_network, calcular_layout_fijo
+# Importación directa desde el setup estático
+from pages.Ecosystem_Setup import load_clean_data, build_network, calcular_layout_fijo
 
 # ==============================================================================
 # INTERFAZ DE USUARIO Y RENDERIZADO
@@ -15,7 +14,7 @@ from pages.Network_Utils import build_network, calcular_layout_fijo
 st.title("🕸️ Collaboration Network Discovery")
 st.markdown("---")
 
-# Carga de datos y cálculo seguro de posiciones fijas
+# Carga de datos y cálculo matemático de posiciones
 df_final = load_clean_data()
 pos_fija = calcular_layout_fijo(df_final)
 
