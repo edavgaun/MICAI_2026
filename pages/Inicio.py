@@ -7,4 +7,4 @@ show_main_instructions()
 
 # Carga limpia de datos
 df = load_clean_data()
-st.sidebar.success(f"📈 Dataset listo: {df.shape[0]} registros.")
+st.sidebar.success(f"📈 Dataset ready: {df.shape[0]} records.")
