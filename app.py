@@ -11,7 +11,7 @@ pagina_grafo = st.Page("pages/Network.py", title="Institutional AI Network", ico
 # 3. Create a custom sidebar layout function
 def draw_custom_sidebar(pages):
     """Forces our custom title to stay at the absolute top of the navigation links."""
-    st.sidebar.markdown("## 🧭 Navigation Panel")
+    st.sidebar.markdown("## 🗺️ Navigation Panel")
     st.sidebar.markdown("---")
     
     # This renders the standard list of page links natively right below our header
