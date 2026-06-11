@@ -8,6 +8,22 @@ from matplotlib.lines import Line2D
 # Importación directa desde el setup estático
 from pages.Ecosystem_Setup import load_clean_data, build_network, calcular_layout_fijo
 
+# Este bloque de CSS destruye los márgenes obligatorios que Streamlit le impone a los gráficos
+st.markdown("""
+    <style>
+        /* Desbloquea el ancho máximo del contenedor de imágenes de Streamlit */
+        [data-testid="stImage"], [data-testid="stFigureGrid"], .stPlotlyChart {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        /* Elimina padding sobrante del bloque principal */
+        .block-container {
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # ==============================================================================
 # INTERFAZ DE USUARIO Y CONFIGURACIÓN DE PANTALLA
 # ==============================================================================
