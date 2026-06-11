@@ -156,13 +156,13 @@ else:
     # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS (TU TOP 10) ---
     with col_barras:
         st.markdown("### 📊 Top 10 Volumen")
-        st.caption("Frecuencia absoluta en el corte actual")
+        st.caption("Frecuencia absoluta en el periodo mostrado")
 
         # Hacemos el conteo agrupando sobre los mismos datos ya filtrados (df_periodo)
         top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
 
         if not top_instituciones.empty:
-            fig_barras, ax_barras = plt.subplots(figsize=(5, 8))
+            fig_barras, ax_barras = plt.subplots(figsize=(4, 8))
             
             y_labels = top_instituciones.index[::-1]
             x_values = top_instituciones.values[::-1]
