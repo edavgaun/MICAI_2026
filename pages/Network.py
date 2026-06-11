@@ -162,7 +162,7 @@ else:
         top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
 
         if not top_instituciones.empty:
-            fig_barras, ax_barras = plt.subplots(figsize=(4, 6))
+            fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
             
             y_labels = top_instituciones.index[::-1]
             x_values = top_instituciones.values[::-1]
@@ -186,5 +186,7 @@ else:
             
             # Desplegamos el gráfico de barras en su columna correspondiente
             st.pyplot(fig_barras, use_container_width=True)
+            # ⬇️ NOTA METODOLÓGICA INCORPORADA ABAJO DEL GRÁFICO ⬇️
+            st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
         else:
             st.info("No hay suficientes datos en este corte.")
