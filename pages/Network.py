@@ -57,7 +57,7 @@ def obtener_etapa(year):
     else: return "Era 4: Solid Networks (2023–2026)"
 
 # ==============================================================================
-# CONTROLES LATERALES (INCLUYE EL NUEVO MULTISELECT)
+# CONTROLES LATERALES
 # ==============================================================================
 st.sidebar.header("Network Controls")
 
@@ -79,18 +79,23 @@ if dropdown_area != 'All Areas':
 
 G_filtrado = build_network(df_periodo)
 
-# NUEVO CONTROLLER: Buscador multiselección dinámico basado solo en las entidades activas de esta Era
+# Buscador multiselección dinámico
 instituciones_activas = sorted(list(G_filtrado.nodes()))
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔍 Highlight Entities")
 selected_institutions = st.sidebar.multiselect(
     "Select to isolate on plots:",
     options=instituciones_activas,
-    help="Leave empty to see the full network. Select one or more to highlight them."
+    help="Leave empty to see the full network. Select one or more to highlight them along with their partners."
 )
 
-# Lógica booleana de enfoque activo
+# Lógica de enfoque extendido (Nodos seleccionados + Vecinos)
 has_focus = len(selected_institutions) > 0
+vecinos_seleccionados = set()
+if has_focus:
+    for n in selected_institutions:
+        if n in G_filtrado:
+            vecinos_seleccionados.update(G_filtrado.neighbors(n))
 
 # ==============================================================================
 # DIBUJO FINAL Y PROCESAMIENTO VISUAL
@@ -123,13 +128,13 @@ else:
             for n in G_filtrado.nodes()
         ]
 
-        # ENFOQUE DINÁMICO EN NODOS: Opacidad variable según selección
+        # MODIFICACIÓN 1: El nodo brilla (alpha=1.0) si está seleccionado O si es un vecino directo
         node_alphas = [
-            1.0 if not has_focus or n in selected_institutions else 0.15
+            1.0 if not has_focus or (n in selected_institutions or n in vecinos_seleccionados) else 0.12
             for n in G_filtrado.nodes()
         ]
 
-        # ENFOQUE DINÁMICO EN ARISTAS: Se iluminan solo si conectan con un nodo seleccionado
+        # Aristas y pesos
         edge_widths = [1 + np.log1p(G_filtrado[u][v]["weight"]) for u, v in G_filtrado.edges()]
         edge_colors = []
         edge_alphas = []
@@ -141,24 +146,25 @@ else:
             elif cu != "Mexico" and cv != "Mexico": edge_colors.append("lightgray")
             else: edge_colors.append("tab:orange")
             
+            # La arista se ilumina si conecta con una de las seleccionadas
             if not has_focus or (u in selected_institutions or v in selected_institutions):
-                edge_alphas.append(0.4)
+                edge_alphas.append(0.5)
             else:
-                edge_alphas.append(0.03) # Casi invisible si no está conectada al foco
+                edge_alphas.append(0.02)
 
-        # Renderizado del grafo aplicando las máscaras de transparencia por capas discretas
+        # Renderizado del grafo por capas
         for i, edge in enumerate(G_filtrado.edges()):
             nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=[edge], width=edge_widths[i], edge_color=edge_colors[i], alpha=edge_alphas[i], ax=ax_red)
         
         for i, node in enumerate(G_filtrado.nodes()):
             nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=[node], node_size=node_sizes[i], node_color=node_colors[i], edgecolors='black', alpha=node_alphas[i], ax=ax_red)
 
-        # ENFOQUE EN ETIQUETAS: Si hay foco, muestra la etiqueta elegida a fuerza sin importar su grado
+        # MODIFICACIÓN 2: Muestra forzada de etiquetas para los seleccionados Y sus socios
         degree = dict(G_filtrado.degree())
         labels = {}
         for node in G_filtrado.nodes():
             if has_focus:
-                if node in selected_institutions:
+                if node in selected_institutions or node in vecinos_seleccionados:
                     labels[node] = node
             else:
                 if degree.get(node, 0) >= 4:
@@ -189,7 +195,7 @@ else:
         ax_red.axis("off")
         st.pyplot(fig_red, use_container_width=True)
 
-    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
+    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS ---
     with col_barras:
         st.markdown("### 📊 Top 10 Volumen")
         st.caption("Frecuencia absoluta en el periodo mostrado")
@@ -207,13 +213,12 @@ else:
                 for inst in y_labels
             ]
             
-            # ENFOQUE EN BARRAS: Atenúa las barras que no pertenezcan al subconjunto seleccionado
+            # Las barras también se iluminan si son las seleccionadas o si son socios que entraron al top
             bar_alphas = [
-                1.0 if not has_focus or inst in selected_institutions else 0.15
+                1.0 if not has_focus or (inst in selected_institutions or inst in vecinos_seleccionados) else 0.15
                 for inst in y_labels
             ]
             
-            # Dibujamos las barras inyectando la máscara de opacidad de forma unitaria
             bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', height=0.5)
             for i, bar in enumerate(bars):
                 bar.set_alpha(bar_alphas[i])
