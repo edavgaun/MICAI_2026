@@ -86,9 +86,7 @@ else:
     international_nodes = G_filtrado.number_of_nodes() - mexican_nodes
     etapa_text = obtener_etapa(slider_year)
 
-    # ==========================================================================
-    # AQUÍ ENTRA LA INTEGRACIÓN EN COLUMNAS (A PARTIR DE LA LÍNEA 79 ORIGINAL)
-    # ==========================================================================
+    # Integración en columnas (75% Red, 25% Barras)
     col_red, col_barras = st.columns([7.5, 2.5])
 
     # --- COLUMNA IZQUIERDA: EL GRAFO DE LA RED ---
@@ -128,7 +126,7 @@ else:
         labels = {node: node for node, deg in degree.items() if deg >= 4}
         nx.draw_networkx_labels(G_filtrado, pos_fija, labels=labels, font_size=9, font_weight='bold', ax=ax_red)
 
-        # Leyenda
+        # Leyenda de la red
         legend_elements = [
             Line2D([0], [0], marker='o', color='w', label='Mexican Institution', markerfacecolor='tab:green', markersize=12, markeredgecolor='black'),
             Line2D([0], [0], marker='o', color='w', label='International Institution', markerfacecolor='#EBF6FF', markersize=12, markeredgecolor='black'),
@@ -150,25 +148,31 @@ else:
         )
         ax_red.axis("off")
 
-        # Desplegamos la red en su columna
         st.pyplot(fig_red, use_container_width=True)
 
-    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS (TU TOP 10) ---
+    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
     with col_barras:
         st.markdown("### 📊 Top 10 Volumen")
         st.caption("Frecuencia absoluta en el periodo mostrado")
 
-        # Hacemos el conteo agrupando sobre los mismos datos ya filtrados (df_periodo)
+        # Hacemos el conteo agrupando sobre los mismos datos ya filtrados
         top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
 
         if not top_instituciones.empty:
             fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
             
+            # Invertimos para el orden correcto de barh
             y_labels = top_instituciones.index[::-1]
             x_values = top_instituciones.values[::-1]
             
-            # Dibujamos las barras horizontales usando tu color base de forma limpia
-            bars = ax_barras.barh(y_labels, x_values, color='#2b5c8f', edgecolor='black', alpha=0.85, height=0.5)
+            # CORRECCIÓN DE CONSISTENCIA: Mapeamos los colores de las barras de forma idéntica al grafo
+            bar_colors = [
+                "tab:green" if institution_country_map.get(inst, "Unknown") == "Mexico" else "#EBF6FF"
+                for inst in y_labels
+            ]
+            
+            # Dibujamos las barras con la paleta correcta
+            bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', alpha=0.85, height=0.5)
             
             # Formato estético sin marcos estorbosos
             ax_barras.tick_params(axis='both', labelsize=10)
@@ -183,10 +187,9 @@ else:
             ax_barras.set_axisbelow(True)
             
             fig_barras.tight_layout()
-            
-            # Desplegamos el gráfico de barras en su columna correspondiente
             st.pyplot(fig_barras, use_container_width=True)
-            # ⬇️ NOTA METODOLÓGICA INCORPORADA ABAJO DEL GRÁFICO ⬇️
+            
+            # Nota metodológica abajo del gráfico
             st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
         else:
             st.info("No hay suficientes datos en este corte.")
