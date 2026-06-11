@@ -38,7 +38,6 @@ def obtener_etapa(year):
 # Filtros en la barra lateral
 st.sidebar.header("Network Controls")
 
-# CORRECCIÓN 1: Cambiamos el 'value' para que por defecto inicie en el año mínimo
 min_year = int(df_final.year.min())
 max_year = int(df_final.year.max())
 
@@ -65,16 +64,18 @@ else:
     international_nodes = G_filtrado.number_of_nodes() - mexican_nodes
     etapa_text = obtener_etapa(slider_year)
 
-    # CORRECCIÓN 2: Ajustamos dimensiones del lienzo y eliminamos márgenes internos artificiales
-    fig, ax = plt.subplots(figsize=(20, 11))
-    fig.subplots_adjust(left=0.01, right=0.99, top=0.93, bottom=0.01)
+    # CAMBIO 1: Ajustamos tamaño de figura más panorámico (24x10) para llenar pantallas wide
+    fig, ax = plt.subplots(figsize=(24, 10))
+    
+    # Eliminación absoluta de márgenes perimetrales de Matplotlib
+    fig.subplots_adjust(left=0.0, right=1.0, top=0.90, bottom=0.0)
 
     # Tamaños basados en volumen
     paper_count = df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
     sizes_raw = np.array([paper_count.get(n, 0) for n in G_filtrado.nodes()])
     sizes_log = np.log1p(sizes_raw)
     sizes_norm = (sizes_log - sizes_log.min()) / (sizes_log.max() - sizes_log.min() + 1e-9)
-    node_sizes = 300 + sizes_norm * 3500
+    node_sizes = 400 + sizes_norm * 4500  # Escalado de nodos ligeramente más grande
 
     # Colores por país
     node_colors = [
@@ -83,45 +84,46 @@ else:
     ]
 
     # Aristas y pesos
-    edge_widths = [1 + np.log1p(G_filtrado[u][v]["weight"]) for u, v in G_filtrado.edges()]
+    edge_widths = [1.5 + np.log1p(G_filtrado[u][v]["weight"]) * 2 for u, v in G_filtrado.edges()]
     edge_colors = []
     for u, v in G_filtrado.edges():
         cu = institution_country_map.get(u, "Unknown")
         cv = institution_country_map.get(v, "Unknown")
         if cu == "Mexico" and cv == "Mexico": edge_colors.append("tab:green")
-        elif cu != "Mexico" and cv != "Mexico": edge_colors.append("lightgray")
+        elif cu != "Mexico" and cv != "Mexico": edge_colors.append("#D3D3D3")
         else: edge_colors.append("tab:orange")
 
     # Renderizado sobre el eje ax
-    nx.draw_networkx_edges(G_filtrado, pos_fija, width=edge_widths, edge_color=edge_colors, alpha=0.4, ax=ax)
-    nx.draw_networkx_nodes(G_filtrado, pos_fija, node_size=node_sizes, node_color=node_colors, edgecolors='black', alpha=0.8, ax=ax)
+    nx.draw_networkx_edges(G_filtrado, pos_fija, width=edge_widths, edge_color=edge_colors, alpha=0.35, ax=ax)
+    nx.draw_networkx_nodes(G_filtrado, pos_fija, node_size=node_sizes, node_color=node_colors, edgecolors='black', alpha=0.85, ax=ax)
 
-    # Etiquetas filtradas (Grado >= 4)
+    # CAMBIO 2: Textos institucionales notablemente más grandes (font_size=12) y legibles
     degree = dict(G_filtrado.degree())
     labels = {node: node for node, deg in degree.items() if deg >= 4}
-    nx.draw_networkx_labels(G_filtrado, pos_fija, labels=labels, font_size=9, font_weight='bold', ax=ax)
+    nx.draw_networkx_labels(G_filtrado, pos_fija, labels=labels, font_size=12, font_weight='bold', ax=ax)
 
-    # Leyenda
+    # CAMBIO 3: Escala de textos en Leyenda ampliada
     legend_elements = [
-        Line2D([0], [0], marker='o', color='w', label='Mexican Institution', markerfacecolor='tab:green', markersize=12, markeredgecolor='black'),
-        Line2D([0], [0], marker='o', color='w', label='International Institution', markerfacecolor='#EBF6FF', markersize=12, markeredgecolor='black'),
-        Line2D([0], [0], color='tab:green', lw=3, label='Mexico ↔ Mexico'),
-        Line2D([0], [0], color='tab:orange', lw=3, label='Mexico ↔ International')
+        Line2D([0], [0], marker='o', color='w', label='Mexican Institution', markerfacecolor='tab:green', markersize=14, markeredgecolor='black'),
+        Line2D([0], [0], marker='o', color='w', label='International Institution', markerfacecolor='#EBF6FF', markersize=14, markeredgecolor='black'),
+        Line2D([0], [0], color='tab:green', lw=4, label='Mexico ↔ Mexico'),
+        Line2D([0], [0], color='tab:orange', lw=4, label='Mexico ↔ International')
     ]
-    ax.legend(handles=legend_elements, loc='upper left', fontsize=11, title='Collaboration Type')
+    ax.legend(handles=legend_elements, loc='upper left', fontsize=13, title='Collaboration Type', title_fontsize=15)
 
-    # CORRECCIÓN 3: Forzar límites de los ejes basados en los extremos reales de pos_fija
+    # Forzar límites estrictos basados en la dispersión espacial real
     x_coords = [coords[0] for coords in pos_fija.values()]
     y_coords = [coords[1] for coords in pos_fija.values()]
-    ax.set_xlim(min(x_coords) - 0.2, max(x_coords) + 0.2)
-    ax.set_ylim(min(y_coords) - 0.2, max(y_coords) + 0.2)
+    ax.set_xlim(min(x_coords) - 0.1, max(x_coords) + 0.1)
+    ax.set_ylim(min(y_coords) - 0.1, max(y_coords) + 0.1)
 
+    # CAMBIO 4: Título gigante e informativo para romper la escala pequeña previa
     ax.set_title(
         f"{etapa_text}\n"
         f"Institutions: {G_filtrado.number_of_nodes()} (Mex: {mexican_nodes} | Int: {international_nodes}) | Edges: {G_filtrado.number_of_edges()}",
-        fontsize=14, fontweight='bold'
+        fontsize=20, fontweight='bold', pad=20
     )
     ax.axis("off")
 
-    # st.pyplot con use_container_width expande el lienzo al contenedor completo de la UI
-    st.pyplot(fig, use_container_width=True)
+    # CAMBIO 5: bbox_inches='tight' recorta cualquier espacio en blanco remanente a los costados
+    st.pyplot(fig, use_container_width=True, bbox_inches='tight')
