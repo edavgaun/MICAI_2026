@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 from pages.Ecosystem_Setup import load_clean_data, build_network, calcular_layout_fijo
 
 # ==============================================================================
-# INTERFAZ DE USUARIO Y RENDERIZADO
+# INTERFAZ DE USUARIO Y CONFIGURACIÓN DE PANTALLA
 # ==============================================================================
 st.title("🕸️ Collaboration Network Discovery")
 st.markdown("---")
@@ -37,7 +37,17 @@ def obtener_etapa(year):
 
 # Filtros en la barra lateral
 st.sidebar.header("Network Controls")
-slider_year = st.sidebar.slider("Select Year Cutoff:", int(df_final.year.min()), int(df_final.year.max()), int(df_final.year.max()))
+
+# CORRECCIÓN 1: Cambiamos el 'value' para que por defecto inicie en el año mínimo
+min_year = int(df_final.year.min())
+max_year = int(df_final.year.max())
+
+slider_year = st.sidebar.slider(
+    "Select Year Cutoff:", 
+    min_value=min_year, 
+    max_value=max_year, 
+    value=min_year
+)
 dropdown_area = st.sidebar.selectbox("Research Area:", ['All Areas'] + areas)
 
 # Filtrado de datos según controles
@@ -55,7 +65,9 @@ else:
     international_nodes = G_filtrado.number_of_nodes() - mexican_nodes
     etapa_text = obtener_etapa(slider_year)
 
-    fig, ax = plt.subplots(figsize=(16, 12))
+    # CORRECCIÓN 2: Ajustamos dimensiones del lienzo y eliminamos márgenes internos artificiales
+    fig, ax = plt.subplots(figsize=(20, 11))
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.93, bottom=0.01)
 
     # Tamaños basados en volumen
     paper_count = df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
@@ -98,12 +110,18 @@ else:
     ]
     ax.legend(handles=legend_elements, loc='upper left', fontsize=11, title='Collaboration Type')
 
+    # CORRECCIÓN 3: Forzar límites de los ejes basados en los extremos reales de pos_fija
+    x_coords = [coords[0] for coords in pos_fija.values()]
+    y_coords = [coords[1] for coords in pos_fija.values()]
+    ax.set_xlim(min(x_coords) - 0.2, max(x_coords) + 0.2)
+    ax.set_ylim(min(y_coords) - 0.2, max(y_coords) + 0.2)
+
     ax.set_title(
         f"{etapa_text}\n"
         f"Institutions: {G_filtrado.number_of_nodes()} (Mex: {mexican_nodes} | Int: {international_nodes}) | Edges: {G_filtrado.number_of_edges()}",
         fontsize=14, fontweight='bold'
     )
     ax.axis("off")
-    fig.tight_layout()
 
-    st.pyplot(fig)
+    # st.pyplot con use_container_width expande el lienzo al contenedor completo de la UI
+    st.pyplot(fig, use_container_width=True)
