@@ -56,10 +56,11 @@ def obtener_etapa(year):
     elif year <= 2022: return "Era 3: Forced Virtualization (2020–2022)"
     else: return "Era 4: Solid Networks (2023–2026)"
 
-# Filtros en la barra lateral
+# ==============================================================================
+# CONTROLES LATERALES (INCLUYE EL NUEVO MULTISELECT)
+# ==============================================================================
 st.sidebar.header("Network Controls")
 
-# CORRECCIÓN 1: Cambiamos el 'value' para que por defecto inicie en el año mínimo
 min_year = int(df_final.year.min())
 max_year = int(df_final.year.max())
 
@@ -71,14 +72,29 @@ slider_year = st.sidebar.slider(
 )
 dropdown_area = st.sidebar.selectbox("Research Area:", ['All Areas'] + areas)
 
-# Filtrado de datos según controles
+# Filtrado inicial de datos según controles de tiempo/área
 df_periodo = df_final[df_final["year"] <= slider_year]
 if dropdown_area != 'All Areas':
     df_periodo = df_periodo[df_periodo['research_area'] == dropdown_area]
 
 G_filtrado = build_network(df_periodo)
 
-# Dibujo final del lienzo de Matplotlib
+# NUEVO CONTROLLER: Buscador multiselección dinámico basado solo en las entidades activas de esta Era
+instituciones_activas = sorted(list(G_filtrado.nodes()))
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔍 Highlight Entities")
+selected_institutions = st.sidebar.multiselect(
+    "Select to isolate on plots:",
+    options=instituciones_activas,
+    help="Leave empty to see the full network. Select one or more to highlight them."
+)
+
+# Lógica booleana de enfoque activo
+has_focus = len(selected_institutions) > 0
+
+# ==============================================================================
+# DIBUJO FINAL Y PROCESAMIENTO VISUAL
+# ==============================================================================
 if G_filtrado.number_of_nodes() == 0:
     st.warning("No data found for the selected combination.")
 else:
@@ -107,23 +123,47 @@ else:
             for n in G_filtrado.nodes()
         ]
 
-        # Aristas y pesos
+        # ENFOQUE DINÁMICO EN NODOS: Opacidad variable según selección
+        node_alphas = [
+            1.0 if not has_focus or n in selected_institutions else 0.15
+            for n in G_filtrado.nodes()
+        ]
+
+        # ENFOQUE DINÁMICO EN ARISTAS: Se iluminan solo si conectan con un nodo seleccionado
         edge_widths = [1 + np.log1p(G_filtrado[u][v]["weight"]) for u, v in G_filtrado.edges()]
         edge_colors = []
+        edge_alphas = []
         for u, v in G_filtrado.edges():
             cu = institution_country_map.get(u, "Unknown")
             cv = institution_country_map.get(v, "Unknown")
+            
             if cu == "Mexico" and cv == "Mexico": edge_colors.append("tab:green")
             elif cu != "Mexico" and cv != "Mexico": edge_colors.append("lightgray")
             else: edge_colors.append("tab:orange")
+            
+            if not has_focus or (u in selected_institutions or v in selected_institutions):
+                edge_alphas.append(0.4)
+            else:
+                edge_alphas.append(0.03) # Casi invisible si no está conectada al foco
 
-        # Renderizado sobre el eje ax_red
-        nx.draw_networkx_edges(G_filtrado, pos_fija, width=edge_widths, edge_color=edge_colors, alpha=0.4, ax=ax_red)
-        nx.draw_networkx_nodes(G_filtrado, pos_fija, node_size=node_sizes, node_color=node_colors, edgecolors='black', alpha=0.8, ax=ax_red)
+        # Renderizado del grafo aplicando las máscaras de transparencia por capas discretas
+        for i, edge in enumerate(G_filtrado.edges()):
+            nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=[edge], width=edge_widths[i], edge_color=edge_colors[i], alpha=edge_alphas[i], ax=ax_red)
+        
+        for i, node in enumerate(G_filtrado.nodes()):
+            nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=[node], node_size=node_sizes[i], node_color=node_colors[i], edgecolors='black', alpha=node_alphas[i], ax=ax_red)
 
-        # Etiquetas filtradas (Grado >= 4)
+        # ENFOQUE EN ETIQUETAS: Si hay foco, muestra la etiqueta elegida a fuerza sin importar su grado
         degree = dict(G_filtrado.degree())
-        labels = {node: node for node, deg in degree.items() if deg >= 4}
+        labels = {}
+        for node in G_filtrado.nodes():
+            if has_focus:
+                if node in selected_institutions:
+                    labels[node] = node
+            else:
+                if degree.get(node, 0) >= 4:
+                    labels[node] = node
+                    
         nx.draw_networkx_labels(G_filtrado, pos_fija, labels=labels, font_size=9, font_weight='bold', ax=ax_red)
 
         # Leyenda de la red
@@ -135,7 +175,7 @@ else:
         ]
         ax_red.legend(handles=legend_elements, loc='upper left', fontsize=11, title='Collaboration Type')
 
-        # Forzar límites de los ejes basados en los extremos reales de pos_fija
+        # Forzar límites estables
         x_coords = [coords[0] for coords in pos_fija.values()]
         y_coords = [coords[1] for coords in pos_fija.values()]
         ax_red.set_xlim(min(x_coords) - 0.2, max(x_coords) + 0.2)
@@ -147,7 +187,6 @@ else:
             fontsize=14, fontweight='bold'
         )
         ax_red.axis("off")
-
         st.pyplot(fig_red, use_container_width=True)
 
     # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
@@ -155,33 +194,37 @@ else:
         st.markdown("### 📊 Top 10 Volumen")
         st.caption("Frecuencia absoluta en el periodo mostrado")
 
-        # Hacemos el conteo agrupando sobre los mismos datos ya filtrados
         top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
 
         if not top_instituciones.empty:
             fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
             
-            # Invertimos para el orden correcto de barh
             y_labels = top_instituciones.index[::-1]
             x_values = top_instituciones.values[::-1]
             
-            # CORRECCIÓN DE CONSISTENCIA: Mapeamos los colores de las barras de forma idéntica al grafo
             bar_colors = [
                 "tab:green" if institution_country_map.get(inst, "Unknown") == "Mexico" else "#EBF6FF"
                 for inst in y_labels
             ]
             
-            # Dibujamos las barras con la paleta correcta
-            bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', alpha=0.85, height=0.5)
+            # ENFOQUE EN BARRAS: Atenúa las barras que no pertenezcan al subconjunto seleccionado
+            bar_alphas = [
+                1.0 if not has_focus or inst in selected_institutions else 0.15
+                for inst in y_labels
+            ]
             
-            # Formato estético sin marcos estorbosos
+            # Dibujamos las barras inyectando la máscara de opacidad de forma unitaria
+            bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', height=0.5)
+            for i, bar in enumerate(bars):
+                bar.set_alpha(bar_alphas[i])
+            
+            # Formato estético
             ax_barras.tick_params(axis='both', labelsize=10)
             ax_barras.spines['top'].set_visible(False)
             ax_barras.spines['right'].set_visible(False)
             ax_barras.spines['left'].set_color('#cccccc')
             ax_barras.spines['bottom'].set_color('#cccccc')
             
-            # Marcadores numéricos integrados a cada barra
             ax_barras.bar_label(bars, padding=5, fontsize=10, fontweight='bold', color='#333333')
             ax_barras.xaxis.grid(True, linestyle='--', alpha=0.3, color='#999999')
             ax_barras.set_axisbelow(True)
@@ -189,7 +232,6 @@ else:
             fig_barras.tight_layout()
             st.pyplot(fig_barras, use_container_width=True)
             
-            # Nota metodológica abajo del gráfico
             st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
         else:
             st.info("No hay suficientes datos en este corte.")
