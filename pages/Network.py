@@ -89,7 +89,7 @@ else:
     # ==========================================================================
     # AQUÍ ENTRA LA INTEGRACIÓN EN COLUMNAS (A PARTIR DE LA LÍNEA 79 ORIGINAL)
     # ==========================================================================
-    col_red, col_barras = st.columns([7, 3])
+    col_red, col_barras = st.columns([7.5, 2.5])
 
     # --- COLUMNA IZQUIERDA: EL GRAFO DE LA RED ---
     with col_red:
@@ -162,7 +162,7 @@ else:
         top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
 
         if not top_instituciones.empty:
-            fig_barras, ax_barras = plt.subplots(figsize=(4, 8))
+            fig_barras, ax_barras = plt.subplots(figsize=(4, 6))
             
             y_labels = top_instituciones.index[::-1]
             x_values = top_instituciones.values[::-1]
