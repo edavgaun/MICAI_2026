@@ -39,7 +39,6 @@ def show_header(text_title):
     st.caption("📘 Based on: Edgar Avalos-Gauna (2026), *Evolution of the Mexican AI Ecosystem*")
     st.caption("Avalos-Gauna, E. (2026). *Tracing Institutional Collaboration and Temporal Dynamics Across the Mexican AI Landscape*. Proceedings of the Mexican International Conference on Artificial Intelligence (MICAI).")
 
-
 def show_main_instructions():
     """Muestra las instrucciones globales de navegación y las eras analíticas."""
     st.markdown("""
@@ -53,6 +52,11 @@ def show_main_instructions():
 
     ---
 
+    ### 🖥️ Sidebar Control Center
+    > 💡 **Navigation & Controls Location:** All analytical pages, metric filters, time sliders, and search parameters are located in the **collapsible dashboard panel strictly on the left side** of your screen. You can expand or hide this control menu using the arrow button at the top-left corner.
+
+    ---
+
     ### ⏳ Temporal Evolution (Analytical Eras)
     The historical development of the Mexican AI ecosystem is analyzed across **four distinct eras**:
     * **Era 1: The Islands** (1997–2008)
@@ -61,7 +65,6 @@ def show_main_instructions():
     * **Era 4: Solid Networks** (2023–2026)
     """, unsafe_allow_html=True)
     st.markdown("---")
-
 
 def build_network(df_periodo):
     """Construye la estructura matemática de la red para el periodo dado."""
