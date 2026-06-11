@@ -79,13 +79,18 @@ if dropdown_area != 'All Areas':
 
 G_filtrado = build_network(df_periodo)
 
-# Buscador multiselección dinámico
-instituciones_activas = sorted(list(G_filtrado.nodes()))
+# ==============================================================================
+# HIGHLIGHT CONTROLS FIXED (PREVENTS STATE LOSS)
+# ==============================================================================
+# Pulling options from global df_final array so choices never disappear dynamically
+global_institutions = sorted(df_final['institution_clean'].dropna().unique())
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔍 Highlight Entities")
 selected_institutions = st.sidebar.multiselect(
     "Select to isolate on plots:",
-    options=instituciones_activas,
+    options=global_institutions,
+    key="network_highlight_search_stable",
     help="Leave empty to see the full network. Select one or more to highlight them along with their partners."
 )
 
@@ -172,100 +177,4 @@ else:
                     colors_active_nodes.append(n_color)
                 else:
                     nodes_bg.append(n)
-                    sizes_bg.append(n_size)
-                    colors_bg_nodes.append(n_color)
-
-        # ⚡ OPTIMIZACIÓN CRÍTICA: Renderizado masivo por bloques sin bucles for
-        # Capa 1: Fondo atenuado (Solo si hay un filtro de foco activo)
-        if has_focus:
-            if edges_bg:
-                nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=edges_bg, width=widths_bg, edge_color=colors_bg, alpha=0.02, ax=ax_red)
-            if nodes_bg:
-                nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=nodes_bg, node_size=sizes_bg, node_color=colors_bg_nodes, edgecolors='black', alpha=0.12, ax=ax_red)
-        
-        # Capa 2: Elementos destacados o red completa estándar
-        if edges_active:
-            nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=edges_active, width=widths_active, edge_color=colors_active, alpha=0.4, ax=ax_red)
-        if nodes_active:
-            nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=nodes_active, node_size=sizes_active, node_color=colors_active_nodes, edgecolors='black', alpha=0.8, ax=ax_red)
-
-        # Configuración de Etiquetas Inteligentes
-        degree = dict(G_filtrado.degree())
-        labels = {}
-        for node in G_filtrado.nodes():
-            if has_focus:
-                if node in focus_nodes:
-                    labels[node] = node
-            else:
-                if degree.get(node, 0) >= 4:
-                    labels[node] = node
-                    
-        nx.draw_networkx_labels(G_filtrado, pos_fija, labels=labels, font_size=9, font_weight='bold', ax=ax_red)
-
-        # Leyenda de la red
-        legend_elements = [
-            Line2D([0], [0], marker='o', color='w', label='Mexican Institution', markerfacecolor='tab:green', markersize=12, markeredgecolor='black'),
-            Line2D([0], [0], marker='o', color='w', label='International Institution', markerfacecolor='#EBF6FF', markersize=12, markeredgecolor='black'),
-            Line2D([0], [0], color='tab:green', lw=3, label='Mexico ↔ Mexico'),
-            Line2D([0], [0], color='tab:orange', lw=3, label='Mexico ↔ International')
-        ]
-        ax_red.legend(handles=legend_elements, loc='upper left', fontsize=11, title='Collaboration Type')
-
-        # Forzar límites estables
-        x_coords = [coords[0] for coords in pos_fija.values()]
-        y_coords = [coords[1] for coords in pos_fija.values()]
-        ax_red.set_xlim(min(x_coords) - 0.2, max(x_coords) + 0.2)
-        ax_red.set_ylim(min(y_coords) - 0.2, max(y_coords) + 0.2)
-
-        ax_red.set_title(
-            f"{etapa_text}\n"
-            f"Institutions: {G_filtrado.number_of_nodes()} (Mex: {mexican_nodes} | Int: {international_nodes}) | Edges: {G_filtrado.number_of_edges()}",
-            fontsize=14, fontweight='bold'
-        )
-        ax_red.axis("off")
-        st.pyplot(fig_red, use_container_width=True)
-
-    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
-    with col_barras:
-        st.markdown("### 📊 Top 10 Volumen")
-        st.caption("Frecuencia absoluta en el periodo mostrado")
-
-        top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
-
-        if not top_instituciones.empty:
-            fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
-            
-            y_labels = top_instituciones.index[::-1]
-            x_values = top_instituciones.values[::-1]
-            
-            bar_colors = [
-                "tab:green" if institution_country_map.get(inst, "Unknown") == "Mexico" else "#EBF6FF"
-                for inst in y_labels
-            ]
-            
-            bar_alphas = [
-                1.0 if not has_focus or inst in focus_nodes else 0.15
-                for inst in y_labels
-            ]
-            
-            bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', height=0.5)
-            for i, bar in enumerate(bars):
-                bar.set_alpha(bar_alphas[i])
-            
-            # Formato estético
-            ax_barras.tick_params(axis='both', labelsize=10)
-            ax_barras.spines['top'].set_visible(False)
-            ax_barras.spines['right'].set_visible(False)
-            ax_barras.spines['left'].set_color('#cccccc')
-            ax_barras.spines['bottom'].set_color('#cccccc')
-            
-            ax_barras.bar_label(bars, padding=5, fontsize=10, fontweight='bold', color='#333333')
-            ax_barras.xaxis.grid(True, linestyle='--', alpha=0.3, color='#999999')
-            ax_barras.set_axisbelow(True)
-            
-            fig_barras.tight_layout()
-            st.pyplot(fig_barras, use_container_width=True)
-            
-            st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
-        else:
-            st.info("No hay suficientes datos en este corte.")
+                    sizes_bg.append
