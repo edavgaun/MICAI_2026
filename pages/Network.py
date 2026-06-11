@@ -91,14 +91,14 @@ selected_institutions = st.sidebar.multiselect(
 
 # Lógica de enfoque extendido (Nodos seleccionados + Vecinos)
 has_focus = len(selected_institutions) > 0
-vecinos_seleccionados = set()
+focus_nodes = set(selected_institutions)
 if has_focus:
     for n in selected_institutions:
         if n in G_filtrado:
-            vecinos_seleccionados.update(G_filtrado.neighbors(n))
+            focus_nodes.update(G_filtrado.neighbors(n))
 
 # ==============================================================================
-# DIBUJO FINAL Y PROCESAMIENTO VISUAL
+# DIBUJO FINAL Y PROCESAMIENTO VISUAL VECTORIAL
 # ==============================================================================
 if G_filtrado.number_of_nodes() == 0:
     st.warning("No data found for the selected combination.")
@@ -115,56 +115,86 @@ else:
         fig_red, ax_red = plt.subplots(figsize=(14, 10))
         fig_red.subplots_adjust(left=0.01, right=0.99, top=0.92, bottom=0.01)
 
-        # Tamaños basados en volumen
+        # Diccionario de volúmenes de papers para el mapeo de tamaños de nodos
         paper_count = df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
-        sizes_raw = np.array([paper_count.get(n, 0) for n in G_filtrado.nodes()])
-        sizes_log = np.log1p(sizes_raw)
-        sizes_norm = (sizes_log - sizes_log.min()) / (sizes_log.max() - sizes_log.min() + 1e-9)
-        node_sizes = 300 + sizes_norm * 3500
+        
+        # Mapeos de aristas: Separamos en activas (iluminadas) y fondo (atenuadas)
+        edges_active = []
+        widths_active = []
+        colors_active = []
+        
+        edges_bg = []
+        widths_bg = []
+        colors_bg = []
 
-        # Colores por país
-        node_colors = [
-            "tab:green" if institution_country_map.get(n, "Unknown") == "Mexico" else "#EBF6FF"
-            for n in G_filtrado.nodes()
-        ]
-
-        # MODIFICACIÓN 1: El nodo brilla (alpha=1.0) si está seleccionado O si es un vecino directo
-        node_alphas = [
-            1.0 if not has_focus or (n in selected_institutions or n in vecinos_seleccionados) else 0.12
-            for n in G_filtrado.nodes()
-        ]
-
-        # Aristas y pesos
-        edge_widths = [1 + np.log1p(G_filtrado[u][v]["weight"]) for u, v in G_filtrado.edges()]
-        edge_colors = []
-        edge_alphas = []
         for u, v in G_filtrado.edges():
             cu = institution_country_map.get(u, "Unknown")
             cv = institution_country_map.get(v, "Unknown")
+            w = 1 + np.log1p(G_filtrado[u][v]["weight"])
             
-            if cu == "Mexico" and cv == "Mexico": edge_colors.append("tab:green")
-            elif cu != "Mexico" and cv != "Mexico": edge_colors.append("lightgray")
-            else: edge_colors.append("tab:orange")
+            if cu == "Mexico" and cv == "Mexico": edge_color = "tab:green"
+            elif cu != "Mexico" and cv != "Mexico": edge_color = "lightgray"
+            else: edge_color = "tab:orange"
             
-            # La arista se ilumina si conecta con una de las seleccionadas
+            # Clasificación por pertenencia al foco de búsqueda
             if not has_focus or (u in selected_institutions or v in selected_institutions):
-                edge_alphas.append(0.5)
+                edges_active.append((u, v))
+                widths_active.append(w)
+                colors_active.append(edge_color)
             else:
-                edge_alphas.append(0.02)
+                edges_bg.append((u, v))
+                widths_bg.append(w)
+                colors_bg.append(edge_color)
 
-        # Renderizado del grafo por capas
-        for i, edge in enumerate(G_filtrado.edges()):
-            nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=[edge], width=edge_widths[i], edge_color=edge_colors[i], alpha=edge_alphas[i], ax=ax_red)
+        # Mapeos de nodos: Separamos en activos y fondo
+        nodes_active = []
+        sizes_active = []
+        colors_active_nodes = []
         
-        for i, node in enumerate(G_filtrado.nodes()):
-            nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=[node], node_size=node_sizes[i], node_color=node_colors[i], edgecolors='black', alpha=node_alphas[i], ax=ax_red)
+        nodes_bg = []
+        sizes_bg = []
+        colors_bg_nodes = []
 
-        # MODIFICACIÓN 2: Muestra forzada de etiquetas para los seleccionados Y sus socios
+        all_nodes = list(G_filtrado.nodes())
+        if all_nodes:
+            sizes_raw = np.array([paper_count.get(n, 0) for n in all_nodes])
+            sizes_log = np.log1p(sizes_raw)
+            sizes_norm = (sizes_log - sizes_log.min()) / (sizes_log.max() - sizes_log.min() + 1e-9)
+            node_sizes_dict = {n: 300 + sizes_norm[i] * 3500 for i, n in enumerate(all_nodes)}
+            
+            for n in all_nodes:
+                n_color = "tab:green" if institution_country_map.get(n, "Unknown") == "Mexico" else "#EBF6FF"
+                n_size = node_sizes_dict[n]
+                
+                if not has_focus or n in focus_nodes:
+                    nodes_active.append(n)
+                    sizes_active.append(n_size)
+                    colors_active_nodes.append(n_color)
+                else:
+                    nodes_bg.append(n)
+                    sizes_bg.append(n_size)
+                    colors_bg_nodes.append(n_color)
+
+        # ⚡ OPTIMIZACIÓN CRÍTICA: Renderizado masivo por bloques sin bucles for
+        # Capa 1: Fondo atenuado (Solo si hay un filtro de foco activo)
+        if has_focus:
+            if edges_bg:
+                nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=edges_bg, width=widths_bg, edge_color=colors_bg, alpha=0.02, ax=ax_red)
+            if nodes_bg:
+                nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=nodes_bg, node_size=sizes_bg, node_color=colors_bg_nodes, edgecolors='black', alpha=0.12, ax=ax_red)
+        
+        # Capa 2: Elementos destacados o red completa estándar
+        if edges_active:
+            nx.draw_networkx_edges(G_filtrado, pos_fija, edgelist=edges_active, width=widths_active, edge_color=colors_active, alpha=0.4, ax=ax_red)
+        if nodes_active:
+            nx.draw_networkx_nodes(G_filtrado, pos_fija, nodelist=nodes_active, node_size=sizes_active, node_color=colors_active_nodes, edgecolors='black', alpha=0.8, ax=ax_red)
+
+        # Configuración de Etiquetas Inteligentes
         degree = dict(G_filtrado.degree())
         labels = {}
         for node in G_filtrado.nodes():
             if has_focus:
-                if node in selected_institutions or node in vecinos_seleccionados:
+                if node in focus_nodes:
                     labels[node] = node
             else:
                 if degree.get(node, 0) >= 4:
@@ -195,7 +225,7 @@ else:
         ax_red.axis("off")
         st.pyplot(fig_red, use_container_width=True)
 
-    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS ---
+    # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
     with col_barras:
         st.markdown("### 📊 Top 10 Volumen")
         st.caption("Frecuencia absoluta en el periodo mostrado")
@@ -213,9 +243,8 @@ else:
                 for inst in y_labels
             ]
             
-            # Las barras también se iluminan si son las seleccionadas o si son socios que entraron al top
             bar_alphas = [
-                1.0 if not has_focus or (inst in selected_institutions or inst in vecinos_seleccionados) else 0.15
+                1.0 if not has_focus or inst in focus_nodes else 0.15
                 for inst in y_labels
             ]
             
