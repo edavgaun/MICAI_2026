@@ -32,7 +32,12 @@ st.markdown("---")
 
 # Carga de datos y cálculo matemático de posiciones
 df_final = load_clean_data()
-pos_fija = calcular_layout_fijo(df_final)
+
+# Guarda las posiciones en la sesión para que solo se calculen UNA VEZ
+if "pos_fija" not in st.session_state:
+    st.session_state["pos_fija"] = calcular_layout_fijo(df_final)
+
+pos_fija = st.session_state["pos_fija"]
 
 # Mapeos y extracción de filtros
 institution_country_map = (
