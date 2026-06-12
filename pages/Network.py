@@ -175,5 +175,4 @@ else:
                 st.pyplot(fig_barras, use_container_width=True)
             
             st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
-        else:
-            st.info("No hay suficientes datos en este corte.")
+            else: st.info("No hay suficientes datos en este corte.")
