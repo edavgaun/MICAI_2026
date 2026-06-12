@@ -109,71 +109,65 @@ else:
     international_nodes = G_filtrado.number_of_nodes() - mexican_nodes
     etapa_text = obtener_etapa(slider_year)
 
-    # CORRECCIÓN 2: RESTORED your panoramic widescreen layout split ratio
     col_red, col_barras = st.columns([7.5, 2.5])
+    
+if not top_instituciones.empty:
+    fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
 
-    # --- COLUMNA IZQUIERDA: EL GRAFO DE LA RED ---
-    with col_red:
+    y_labels = top_instituciones.index[::-1]
+    x_values = top_instituciones.values[::-1]
 
-        fig_red = draw_network(
-            G_filtrado=G_filtrado,
-            pos_fija=pos_fija,
-            institution_country_map=institution_country_map,
-            df_periodo=df_periodo,
-            title=(
-                f"{etapa_text}\n"
-                f"Institutions: {G_filtrado.number_of_nodes()} "
-                f"(Mex: {mexican_nodes} | Int: {international_nodes}) "
-                f"| Edges: {G_filtrado.number_of_edges()}"
-            ),
-            selected_institutions=selected_institutions
-        )
-    
-        st.pyplot(fig_red, use_container_width=True)
-        
-        # --- COLUMNA DERECHA: LAS BARRAS DINÁMICAS CONSISTENTES ---
-        with col_barras:
-            st.markdown("### 📊 Top 10 Volumen")
-            st.caption("Frecuencia absoluta en el periodo mostrado")
-    
-            top_instituciones = df_periodo['institution_clean'].value_counts().head(10)
-    
-            if not top_instituciones.empty:
-                # RESTORED your optimal bar height dimensions (4, 5)
-                fig_barras, ax_barras = plt.subplots(figsize=(4, 5))
-                
-                y_labels = top_instituciones.index[::-1]
-                x_values = top_instituciones.values[::-1]
-                
-                # Mapeamos los colores de las barras de forma idéntica al grafo
-                bar_colors = [
-                    "tab:green" if institution_country_map.get(inst, "Unknown") == "Mexico" else "#EBF6FF"
-                    for inst in y_labels
-                ]
-                
-                bar_alphas = [
-                    1.0 if not has_focus or inst in focus_nodes else 0.15
-                    for inst in y_labels
-                ]
-                
-                bars = ax_barras.barh(y_labels, x_values, color=bar_colors, edgecolor='black', height=0.5)
-                for i, bar in enumerate(bars):
-                    bar.set_alpha(bar_alphas[i])
-                
-                # Formato estético sin marcos estorbosos
-                ax_barras.tick_params(axis='both', labelsize=10)
-                ax_barras.spines['top'].set_visible(False)
-                ax_barras.spines['right'].set_visible(False)
-                ax_barras.spines['left'].set_color('#cccccc')
-                ax_barras.spines['bottom'].set_color('#cccccc')
-                
-                ax_barras.bar_label(bars, padding=5, fontsize=10, fontweight='bold', color='#333333')
-                ax_barras.xaxis.grid(True, linestyle='--', alpha=0.3, color='#999999')
-                ax_barras.set_axisbelow(True)
-                
-                fig_barras.tight_layout()
-                st.pyplot(fig_barras, use_container_width=True)
-            
-            st.caption("**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales).")
-            else: 
-                st.info("No hay suficientes datos en este corte.")
+    bar_colors = [
+        "tab:green" if institution_country_map.get(inst, "Unknown") == "Mexico" else "#EBF6FF"
+        for inst in y_labels
+    ]
+
+    bar_alphas = [
+        1.0 if not has_focus or inst in focus_nodes else 0.15
+        for inst in y_labels
+    ]
+
+    bars = ax_barras.barh(
+        y_labels,
+        x_values,
+        color=bar_colors,
+        edgecolor='black',
+        height=0.5
+    )
+
+    for i, bar in enumerate(bars):
+        bar.set_alpha(bar_alphas[i])
+
+    ax_barras.tick_params(axis='both', labelsize=10)
+    ax_barras.spines['top'].set_visible(False)
+    ax_barras.spines['right'].set_visible(False)
+    ax_barras.spines['left'].set_color('#cccccc')
+    ax_barras.spines['bottom'].set_color('#cccccc')
+
+    ax_barras.bar_label(
+        bars,
+        padding=5,
+        fontsize=10,
+        fontweight='bold',
+        color='#333333'
+    )
+
+    ax_barras.xaxis.grid(
+        True,
+        linestyle='--',
+        alpha=0.3,
+        color='#999999'
+    )
+
+    ax_barras.set_axisbelow(True)
+
+    fig_barras.tight_layout()
+
+    st.pyplot(fig_barras, use_container_width=True)
+
+    st.caption(
+        "**Nota:** El asterisco (`*`) indica una institución internacional identificada con siglas reales, mientras que la tilde (`~`) representa una institución abreviada por el sistema (no siglas reales)."
+    )
+
+else:
+    st.info("No hay suficientes datos en este corte.")
