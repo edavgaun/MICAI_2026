@@ -23,8 +23,8 @@ def set_layout():
             .block-container {
                 padding-top: 1.5rem;
                 padding-bottom: 1rem;
-                padding-left: 1rem;
-                padding-right: 1rem;
+                padding-left: 2rem;
+                padding-right: 2rem;
             }
             [data-testid="stSidebarUserContent"] {
                 padding-top: 1.5rem;
