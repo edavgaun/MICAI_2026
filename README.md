@@ -30,7 +30,7 @@ mexican-ai-ecosystem/
 ├── requirements.txt
 ├── README.md
 │
-├── data/
+├── Data/
 │   └── metadata_extraida.csv
 │
 ├── Moudules/
