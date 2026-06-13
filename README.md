@@ -1,3 +1,5 @@
+<img src='assets/MICAI_25YEARSBLANCO-1024x379.webp' width=400>
+
 # 🇲🇽 Evolution of the Mexican AI Ecosystem
 
 This Streamlit application explores the evolution of the Artificial Intelligence research ecosystem in Mexico using bibliometric and network analysis techniques. The project is based on proceedings data (MICAI and related sources) and visualizes how institutions, researchers, and collaborations have evolved over time.
