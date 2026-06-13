@@ -33,19 +33,16 @@ mexican-ai-ecosystem/
 ├── data/
 │   └── metadata_extraida.csv
 │
-├── src/
-│   ├── data_loader.py
-│   ├── preprocessing.py
-│   ├── network.py
-│   └── visualization.py
+├── Moudules/
+│   ├── Ecosystem_Setup.py
+│   ├── Inicio.py
 │
 ├── assets/
 │   └── (imagenes, logos si quieres)
 │
 └── pages/
-    ├── 1_Overview.py
-    ├── 2_Network.py
-    └── 3_Institutions.py
+    ├── Network.py
+    └── 
 ```
 
 ---
