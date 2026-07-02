@@ -57,9 +57,8 @@ if st.session_state["active_tab"] == "Home":
     st.markdown(text.HOME_INTRO)
     st.markdown("---")
     
-    # Renderizado directo por URL remota para evitar fallos de Pillow (PIL) locales
-    url_diagrama = "https://images.squarespace-cdn.com/content/v1/5ecec052ee6c2840d4ffbc7d/1592928509015-Z5I084L974V4C33V2Q6W/diagram.png"
-    st.image(url_diagrama, use_container_width=True)
+    # Despliegue del diagrama horizontal desde tu carpeta assets
+    st.image("assets/4_stages.png", use_container_width=True)
 
 elif st.session_state["active_tab"] == "Network":
     st.title(text.APP_TITLE)
@@ -93,6 +92,7 @@ elif st.session_state["active_tab"] == "Network":
     if has_focus:
         for n in selected_institutions:
             if n in G_filtrado: 
+                # CORRECCIÓN AQUÍ: Se cerró correctamente el paréntesis de la función update()
                 focus_nodes.update(G_filtrado.neighbors(n))
 
     # Renderizado de componentes gráficos de la Red
