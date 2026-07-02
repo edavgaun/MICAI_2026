@@ -1,14 +1,12 @@
-# Application Text Strings
 APP_TITLE = "🕸️ Collaboration Network Discovery"
-APP_SUBTITLE = "Explore the evolution of Mexico's AI ecosystem page-by-page."
+APP_SUBTITLE = "Explora la evolución del ecosistema de IA en México de forma interactiva."
 
 HOME_TITLE = "🇲🇽 Mexico's AI Ecosystem Timeline"
 HOME_INTRO = """
-Welcome to the interactive map of Artificial Intelligence research and collaboration in Mexico. 
-Use the navigation buttons above to explore the network architecture across generations.
+Bienvenido al mapa interactivo de investigación y colaboración de Inteligencia Artificial en México.
+Utiliza los botones de navegación superiores para explorar la arquitectura de la red a través de las distintas eras.
 """
 
-# Chronological Narrative Chapters
 ERAS = {
     1: {"name": "Era 1: The Islands (1997–2008)", "year": 2008},
     2: {"name": "Era 2: The Bridges (2009–2019)", "year": 2019},
@@ -17,5 +15,4 @@ ERAS = {
 }
 
 BAR_CHART_TITLE = "### 📊 Top 10 Volumen"
-BAR_CHART_CAPTION = "Frecuencia absoluta en el periodo mostrado"
-EMPTY_DATA_WARNING = "No data found for the selected combination."
+EMPTY_DATA_WARNING = "No se encontraron datos para la combinación seleccionada."
