@@ -46,8 +46,24 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         else:
             edge['color'] = "rgba(255, 127, 14, 0.6)"
 
-    nt.set_options('{"physics": {"barnesHut": {"gravitationalConstant": -6000, "centralGravity": 0.2, "springLength": 120}, "minVelocity": 0.75}}')
+    # Configuración de rendimiento extremo para Vis.js
+    nt.set_options("""
+    {
+      "physics": {
+        "enabled": false
+      },
+      "interaction": {
+        "hover": true,
+        "tooltipDelay": 100,
+        "hideEdgesOnDrag": true,
+        "hideEdgesOnZoom": true
+      }
+    }
+    """)
+    
     nt.save_graph("temp_network.html")
+    with open("temp_network.html", 'r', encoding='utf-8') as f:
+        components.html(f.read(), height=760)
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         components.html(f.read(), height=760)
 
