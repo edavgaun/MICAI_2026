@@ -1,7 +1,9 @@
 import pandas as pd
 import networkx as nx
 import itertools
+import streamlit as st  # Importamos streamlit para activar las funciones de caché
 
+@st.cache_data  # 🧠 Guarda el DataFrame en memoria para no volver a leer el CSV del disco
 def load_clean_data():
     """Lee el dataset generado en Colab desde la carpeta local."""
     df = pd.read_csv("Data/data.csv")
@@ -26,6 +28,7 @@ def build_network(df_periodo):
 
     return G
 
+@st.cache_resource  # 🧠 Almacena las posiciones de los nodos (400 iteraciones) para calcularlas SOLO UNA VEZ
 def calcular_layout_fijo(df_final):
     """Calcula las posiciones espaciales base usando tus parámetros de Colab."""
     G_total = build_network(df_final)
@@ -38,6 +41,7 @@ def calcular_layout_fijo(df_final):
     )
     return pos
 
+@st.cache_data  # 🧠 Guarda el diccionario de mapeo en memoria acelerando los filtros visuales
 def obtener_mapeo_paises(df_final):
     """Diccionario para saber qué país le corresponde a cada institución."""
     return (
