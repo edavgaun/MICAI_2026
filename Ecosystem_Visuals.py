@@ -13,75 +13,74 @@ def calcular_metricas_periodo(df_periodo):
 def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions):
     """Dibuja la red interactiva con el tamaño de nodos corregido y rendimiento optimizado."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
-    # from_nx() tiende a sobrescribir atributos, por lo que hereda los nodos/aristas y aplicamos estilos manualmente
-    nt.from_nx(G)
     
     paper_count = calcular_metricas_periodo(df_periodo)
-    num_nodos = len(nt.nodes)
+    num_nodos = len(G.nodes())
     
-    # Procesamiento eficiente de todos los nodos (conectados y solitarios)
-    for i, node in enumerate(nt.nodes):
-        node_id = node['id']
+    # 🛠️ CONSTRUCCIÓN EXPLÍCITA: Añadimos los nodos uno por uno controlando sus propiedades reales
+    for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
-        
-        # Obtenemos la cantidad de papers real
         p_count = paper_count.get(node_id, 1)
         
-        # 🛡️ CORRECCIÓN DE TAMAÑO: Restauramos la escala logarítmica correcta
-        # Un nodo con 1 paper será tamaño 10 + (np.log1p(1)=0.69 * 10) = ~17 (pequeño).
-        # Un nodo con 100 papers será tamaño 10 + (np.log1p(100)=4.6 * 10) = ~56 (grande).
-        # Esto asegura que el tamaño sea proporcional al volumen y no aparezcan 'gigantes' por defecto.
-        node['size'] = 10 + (np.log1p(p_count) * 10)
+        # Fórmula original exacta para el tamaño (pequeño para 1 paper, escala controlada para más)
+        size_value = 10 + (np.log1p(p_count) * 10)
         
-        # Posicionamiento: Si el nodo tiene posición fija, la hereda.
-        # Si es un nodo solitario, se calcula una órbita exterior para que no se encimen al centro.
+        # Posicionamiento estático
         if node_id in pos:
-            node['x'] = pos[node_id][0] * 300
-            node['y'] = pos[node_id][1] * 300
+            x_pos = pos[node_id][0] * 300
+            y_pos = pos[node_id][1] * 300
         else:
             angulo = i * (2 * np.pi / max(num_nodos, 1))
-            node['x'] = np.cos(angulo) * 650
-            node['y'] = np.sin(angulo) * 650
+            x_pos = np.cos(angulo) * 650
+            y_pos = np.sin(angulo) * 650
             
-        # Congelamos las físicas por nodo para asegurar la carga instantánea de los widgets
-        node['physics'] = False 
+        # Color base
+        bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
+        border_color = "black"
+        font_color = "#333333"
         
-        node['color'] = {'background': "#2ca02c" if is_mexico else "#EBF6FF", 'border': "black"}
-        node['borderWidth'] = 1.5
-        
-        # Tooltip limpio con saltos de línea estándar
-        node['title'] = f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
-        
-        # Estilos para resaltar enfoque
-        if has_focus:
-            if node_id not in focus_nodes:
-                node['color']['background'] = "rgba(200, 200, 200, 0.1)"
-                node['color']['border'] = "rgba(0,0,0,0.1)"
-                node['font'] = {'color': 'rgba(0,0,0,0.1)'}
+        # Filtro de enfoque
+        if has_focus and node_id not in focus_nodes:
+            bg_color = "rgba(200, 200, 200, 0.1)"
+            border_color = "rgba(0,0,0,0.1)"
+            font_color = "rgba(0,0,0,0.1)"
+            
+        nt.add_node(
+            node_id,
+            label=node_id,
+            size=size_value,
+            x=x_pos,
+            y=y_pos,
+            physics=False,
+            borderWidth=1.5,
+            color={'background': bg_color, 'border': border_color},
+            font={'color': font_color},
+            title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
+        )
 
-    # Procesamiento de aristas (conexiones)
-    for edge in nt.edges:
-        u, v = edge['from'], edge['to']
+    # Añadimos las aristas de forma explícita
+    for u, v in G.edges():
         edge_data = G.get_edge_data(u, v) or G.get_edge_data(v, u) or {}
         peso = edge_data.get("weight", 1)
-        edge['width'] = 1 + np.log1p(peso)
+        width_value = 1 + np.log1p(peso)
         
         country_u = institution_country_map.get(u, "Unknown")
         country_v = institution_country_map.get(v, "Unknown")
         
         if country_u == "Mexico" and country_v == "Mexico":
-            edge['color'] = "rgba(44, 160, 44, 0.6)"
+            edge_color = "rgba(44, 160, 44, 0.6)"
         elif country_u != "Mexico" and country_v != "Mexico":
-            edge['color'] = "rgba(211, 211, 211, 0.4)"
+            edge_color = "rgba(211, 211, 211, 0.4)"
         else:
-            edge['color'] = "rgba(255, 127, 14, 0.6)"
+            edge_color = "rgba(255, 127, 14, 0.6)"
 
-        if has_focus:
-            if u not in selected_institutions and v not in selected_institutions:
-                edge['color'] = "rgba(200, 200, 200, 0.02)"
+        if has_focus and (u not in selected_institutions and v not in selected_institutions):
+            edge_color = "rgba(200, 200, 200, 0.02)"
+            
+        nt.add_edge(u, v, width=width_value, color=edge_color)
 
-    # Desactivamos las simulación dinámicas pesadas de Vis.js para optimizar el renderizado del navegador
+    # Configuración estática ultra-veloz
     nt.set_options("""
     {
       "physics": {
@@ -100,18 +99,12 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         components.html(f.read(), height=760)
 
-
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
-    """Muestra el top 10 de volumen de forma interactiva usando Altair nativo."""
     counts = df_periodo['institution_clean'].value_counts().head(10).reset_index()
     counts.columns = ['Institución', 'Papers']
     
-    counts['Color'] = counts['Institución'].apply(
-        lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF'
-    )
-    counts['Opacity'] = counts['Institución'].apply(
-        lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15
-    )
+    counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
+    counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
 
     if not counts.empty:
         chart = alt.Chart(counts).mark_bar(stroke='black', strokeWidth=1).encode(
@@ -120,10 +113,7 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
             color=alt.Color('Color:N', scale=None),
             opacity=alt.Opacity('Opacity:Q', scale=None),
             tooltip=['Institución', 'Papers']
-        ).properties(
-            width='container',
-            height=400
-        )
+        ).properties(width='container', height=400)
         st.altair_chart(chart, use_container_width=True)
     else:
         st.info("Sin suficientes datos.")
