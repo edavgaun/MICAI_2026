@@ -7,11 +7,21 @@ import Ecosystem_Visuals as visuals
 
 st.set_page_config(layout="wide")
 
-# Forzado de CSS únicamente para los márgenes de la pantalla wide
+# CSS limpio: Solo reparamos los márgenes de la pantalla y la altura del botón nativo
 st.markdown("""
     <style>
         [data-testid="stImage"], [data-testid="stFigureGrid"], .stPlotlyChart { width: 100% !important; max-width: 100% !important; }
         .block-container { padding-left: 2rem !important; padding-right: 2rem !important; padding-top: 1rem !important; }
+        
+        /* Asegura que los botones de la barra superior tengan una altura e interna correcta */
+        div.stButton > button {
+            height: 45px !important;
+            line-height: 45px !important;
+            padding: 0px 25px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
@@ -25,29 +35,37 @@ pos_fija = st.session_state["pos_fija"]
 institution_country_map = backend.obtener_mapeo_paises(df_final)
 areas = sorted(df_final['research_area'].dropna().unique())
 
-# ==============================================================================
-# NAVEGACIÓN NATIVA POR TABS (Corrige la altura y el texto aplastado de golpe)
-# ==============================================================================
-tab_home, tab_network = st.tabs(["🏠 Home Overview", "🕸️ Network Discovery"])
+# Inicializamos el estado de la pestaña activa si no existe
+if "active_tab" not in st.session_state:
+    st.session_state["active_tab"] = "Home"
 
-# ------------------------------------------------------------------------------
-# CONTENIDO DE LA PESTAÑA: HOME
-# ------------------------------------------------------------------------------
-with tab_home:
+# BARRA DE NAVEGACIÓN SUPERIOR:
+# Columnas proporcionales para que queden juntas a la izquierda sin aplastarse en vertical
+nav_col1, nav_col2, _ = st.columns([1.5, 2.0, 6.5])
+with nav_col1:
+    if st.button("🏠 Home Overview", key="btn_home_v2"): 
+        st.session_state["active_tab"] = "Home"
+with nav_col2:
+    if st.button("🕸️ Network Discovery", key="btn_network_v2"): 
+        st.session_state["active_tab"] = "Network"
+
+st.markdown("---")
+
+# ==============================================================================
+# ENRUTADOR PRINCIPAL
+# ==============================================================================
+if st.session_state["active_tab"] == "Home":
     st.title(text.HOME_TITLE)
     st.markdown(text.HOME_INTRO)
 
-# ------------------------------------------------------------------------------
-# CONTENIDO DE LA PESTAÑA: NETWORK
-# ------------------------------------------------------------------------------
-with tab_network:
+elif st.session_state["active_tab"] == "Network":
     st.title(text.APP_TITLE)
     st.caption(text.APP_SUBTITLE)
     
     if "current_era_step" not in st.session_state:
         st.session_state["current_era_step"] = 1
 
-    # Botones de cambio de Era dentro de la sección
+    # Navegación interna de Eras
     col_back, col_spacer, col_next = st.columns([2, 6, 2])
     with col_back:
         if st.button("⬅️ Anterior Era", key="era_back") and st.session_state["current_era_step"] > 1: 
@@ -83,7 +101,7 @@ with tab_network:
             if n in G_filtrado: 
                 focus_nodes.update(G_filtrado.neighbors(n))
 
-    # Inyección en layout final
+    # Inyección en el layout visual
     if G_filtrado.number_of_nodes() == 0:
         st.warning(text.EMPTY_DATA_WARNING)
     else:
