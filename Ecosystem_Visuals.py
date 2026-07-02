@@ -11,8 +11,9 @@ def calcular_metricas_periodo(df_periodo):
     return df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
 
 def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions):
-    """Dibuja la red interactiva con rendimiento optimizado y nodos aislados recuperados."""
+    """Dibuja la red interactiva con el tamaño de nodos corregido y rendimiento optimizado."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
+    # from_nx() tiende a sobrescribir atributos, por lo que hereda los nodos/aristas y aplicamos estilos manualmente
     nt.from_nx(G)
     
     paper_count = calcular_metricas_periodo(df_periodo)
@@ -23,7 +24,15 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         node_id = node['id']
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
+        
+        # Obtenemos la cantidad de papers real
         p_count = paper_count.get(node_id, 1)
+        
+        # 🛡️ CORRECCIÓN DE TAMAÑO: Restauramos la escala logarítmica correcta
+        # Un nodo con 1 paper será tamaño 10 + (np.log1p(1)=0.69 * 10) = ~17 (pequeño).
+        # Un nodo con 100 papers será tamaño 10 + (np.log1p(100)=4.6 * 10) = ~56 (grande).
+        # Esto asegura que el tamaño sea proporcional al volumen y no aparezcan 'gigantes' por defecto.
+        node['size'] = 10 + (np.log1p(p_count) * 10)
         
         # Posicionamiento: Si el nodo tiene posición fija, la hereda.
         # Si es un nodo solitario, se calcula una órbita exterior para que no se encimen al centro.
@@ -40,9 +49,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         
         node['color'] = {'background': "#2ca02c" if is_mexico else "#EBF6FF", 'border': "black"}
         node['borderWidth'] = 1.5
-        node['size'] = 15 + (np.log1p(p_count) * 15)
+        
+        # Tooltip limpio con saltos de línea estándar
         node['title'] = f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         
+        # Estilos para resaltar enfoque
         if has_focus:
             if node_id not in focus_nodes:
                 node['color']['background'] = "rgba(200, 200, 200, 0.1)"
