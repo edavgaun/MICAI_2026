@@ -11,36 +11,38 @@ def calcular_metricas_periodo(df_periodo):
     return df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
 
 def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions):
-    """Dibuja la red interactiva con el tamaño de nodos corregido y rendimiento optimizado."""
+    """Dibuja la red interactiva con tamaños jerárquicos reales y físicas de separación ultrarápidas."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
     
     paper_count = calcular_metricas_periodo(df_periodo)
     num_nodos = len(G.nodes())
     
-    # 🛠️ CONSTRUCCIÓN EXPLÍCITA: Añadimos los nodos uno por uno controlando sus propiedades reales
+    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y JERÁRQUICOS
     for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
         p_count = paper_count.get(node_id, 1)
         
-        # Fórmula original exacta para el tamaño (pequeño para 1 paper, escala controlada para más)
-        size_value = 10 + (np.log1p(p_count) * 10)
+        # 🛠️ AJUSTE DE TAMAÑO ESTRICTO: 
+        # Si tiene 1 paper, el tamaño será mínimo (8). Si es una macro-institución, crecerá de forma notable.
+        if p_count == 1:
+            size_value = 6
+        else:
+            size_value = 8 + (np.log1p(p_count) * 8)
         
-        # Posicionamiento estático
+        # Posicionamiento inicial aproximado (Vis.js usará sus fuerzas a partir de aquí)
         if node_id in pos:
-            x_pos = pos[node_id][0] * 300
-            y_pos = pos[node_id][1] * 300
+            x_pos = pos[node_id][0] * 250
+            y_pos = pos[node_id][1] * 250
         else:
             angulo = i * (2 * np.pi / max(num_nodos, 1))
-            x_pos = np.cos(angulo) * 650
-            y_pos = np.sin(angulo) * 650
+            x_pos = np.cos(angulo) * 550
+            y_pos = np.sin(angulo) * 550
             
-        # Color base
         bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
         border_color = "black"
         font_color = "#333333"
         
-        # Filtro de enfoque
         if has_focus and node_id not in focus_nodes:
             bg_color = "rgba(200, 200, 200, 0.1)"
             border_color = "rgba(0,0,0,0.1)"
@@ -52,14 +54,13 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             size=size_value,
             x=x_pos,
             y=y_pos,
-            physics=False,
-            borderWidth=1.5,
+            borderWidth=1.2,
             color={'background': bg_color, 'border': border_color},
-            font={'color': font_color},
+            font={'size': 11, 'color': font_color},
             title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         )
 
-    # Añadimos las aristas de forma explícita
+    # 2. CONSTRUCCIÓN DE ARISTAS
     for u, v in G.edges():
         edge_data = G.get_edge_data(u, v) or G.get_edge_data(v, u) or {}
         peso = edge_data.get("weight", 1)
@@ -69,22 +70,36 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         country_v = institution_country_map.get(v, "Unknown")
         
         if country_u == "Mexico" and country_v == "Mexico":
-            edge_color = "rgba(44, 160, 44, 0.6)"
+            edge_color = "rgba(44, 160, 44, 0.5)"
         elif country_u != "Mexico" and country_v != "Mexico":
-            edge_color = "rgba(211, 211, 211, 0.4)"
+            edge_color = "rgba(211, 211, 211, 0.3)"
         else:
-            edge_color = "rgba(255, 127, 14, 0.6)"
+            edge_color = "rgba(255, 127, 14, 0.5)"
 
         if has_focus and (u not in selected_institutions and v not in selected_institutions):
-            edge_color = "rgba(200, 200, 200, 0.02)"
+            edge_color = "rgba(200, 200, 200, 0.01)"
             
         nt.add_edge(u, v, width=width_value, color=edge_color)
 
-    # Configuración estática ultra-veloz
+    # 3. 🛠️ SOLUCIÓN AL AMONTONAMIENTO: FÍSICAS DE ESTABILIZACIÓN ULTRA-RÁPIDAS
+    # Activamos barnesHut pero obligamos al navegador a pre-calcular el ordenamiento 
+    # ANTES de pintar el lienzo, evitando retrasos en la carga y separando los nodos del centro.
     nt.set_options("""
     {
       "physics": {
-        "enabled": false
+        "enabled": true,
+        "barnesHut": {
+          "gravitationalConstant": -4000,
+          "centralGravity": 0.15,
+          "springLength": 90,
+          "springConstant": 0.05,
+          "damping": 0.09
+        },
+        "stabilization": {
+          "enabled": true,
+          "iterations": 100,
+          "updateInterval": 25
+        }
       },
       "interaction": {
         "hover": true,
