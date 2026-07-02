@@ -96,4 +96,11 @@ elif st.session_state["active_tab"] == "Network":
 
     # Renderizado de componentes gráficos de la Red
     if G_filtrado.number_of_nodes() == 0:
-        st.warning(
+        st.warning(text.EMPTY_DATA_WARNING)
+    else:
+        col_red, col_barras = st.columns([7.5, 2.5])
+        with col_red:
+            visuals.draw_network_graph(G_filtrado, pos_fija, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions)
+        with col_barras:
+            st.markdown(text.BAR_CHART_TITLE)
+            visuals.draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes)
