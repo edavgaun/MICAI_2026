@@ -22,10 +22,7 @@ def build_network(df_periodo):
         if len(instituciones) == 1:
             G.add_node(instituciones[0])
             
-    # OPTIMIZACIÓN CRÍTICA: Removemos nodos que se quedan con grado 0 al aplicar filtros 
-    # Esto reduce hasta un 40% el peso del HTML que el navegador debe renderizar.
-    nodos_aislados = [node for node, degree in dict(G.degree()).items() if degree == 0]
-    G.remove_nodes_from(nodos_aislados)
+    # Quitamos las líneas que eliminaban los nodos aislados para que vuelvan a aparecer
     return G
 
 @st.cache_resource
