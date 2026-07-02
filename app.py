@@ -1,14 +1,13 @@
 import streamlit as st
 
-# Explicit modular imports
+# Conexión directa a tus submódulos limpios
 import Ecosystem_Setup as backend
 import Ecosystem_Content as text
 import Ecosystem_Visuals as visuals
 
-# System Page Setup
 st.set_page_config(layout="wide")
 
-# Inject viewport canvas tweaks to break Streamlit margins
+# Rompemos contenedores internos rígidos de Streamlit
 st.markdown("""
     <style>
         [data-testid="stImage"], [data-testid="stFigureGrid"], .stPlotlyChart { width: 100% !important; max-width: 100% !important; }
@@ -16,30 +15,32 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 1. State/Data Caching Initialization
+# Carga e inicialización de estados persistentes
 df_final = backend.load_clean_data()
 
 if "pos_fija" not in st.session_state:
     st.session_state["pos_fija"] = backend.calcular_layout_fijo(df_final)
 pos_fija = st.session_state["pos_fija"]
 
-institution_country_map = df_final[['institution_clean', 'Country']].dropna().drop_duplicates().groupby('institution_clean')['Country'].first().to_dict()
+institution_country_map = backend.obtener_mapeo_paises(df_final)
 areas = sorted(df_final['research_area'].dropna().unique())
 
-# 2. Borderless Top Navigation Header
+# Tabs superiores de navegación (Sin barras laterales molestas)
 if "active_tab" not in st.session_state:
     st.session_state["active_tab"] = "Home"
 
 nav_col1, nav_col2, _ = st.columns([1.2, 1.2, 5])
 with nav_col1:
-    if st.button("🏠 Home Overview", use_container_width=True): st.session_state["active_tab"] = "Home"
+    if st.button("🏠 Home Overview", use_container_width=True): 
+        st.session_state["active_tab"] = "Home"
 with nav_col2:
-    if st.button("🕸️ Network Discovery", use_container_width=True): st.session_state["active_tab"] = "Network"
+    if st.button("🕸️ Network Discovery", use_container_width=True): 
+        st.session_state["active_tab"] = "Network"
 
 st.markdown("---")
 
 # ==============================================================================
-# WORKSPACE RUNTIME ROUTING
+# ENRUTADOR PRINCIPAL
 # ==============================================================================
 if st.session_state["active_tab"] == "Home":
     st.title(text.HOME_TITLE)
@@ -52,39 +53,43 @@ elif st.session_state["active_tab"] == "Network":
     if "current_era_step" not in st.session_state:
         st.session_state["current_era_step"] = 1
 
-    # Floating UI timeline stepping buttons
+    # Navegación secuencial por páginas de Era estilo historia
     col_back, _, col_next = st.columns([2, 6, 2])
     with col_back:
-        if st.button("⬅️ Previous Era") and st.session_state["current_era_step"] > 1: st.session_state["current_era_step"] -= 1
+        if st.button("⬅️ Anterior Era") and st.session_state["current_era_step"] > 1: 
+            st.session_state["current_era_step"] -= 1
     with col_next:
-        if st.button("Next Era ➡️") and st.session_state["current_era_step"] < 4: st.session_state["current_era_step"] += 1
+        if st.button("Siguiente Era ➡️") and st.session_state["current_era_step"] < 4: 
+            st.session_state["current_era_step"] += 1
 
     active_step = st.session_state["current_era_step"]
     slider_year = text.ERAS[active_step]["year"]
     st.subheader(f"📖 {text.ERAS[active_step]['name']}")
 
-    # Dashboard Control Layer Rows
+    # Selectores en cuadrícula horizontal
     filter_col1, filter_col2 = st.columns(2)
     with filter_col1:
-        dropdown_area = st.selectbox("Filter by Research Area:", ['All Areas'] + areas)
+        dropdown_area = st.selectbox("Filtrar por Área de Investigación:", ['All Areas'] + areas)
     with filter_col2:
         global_institutions = sorted(df_final['institution_clean'].dropna().unique())
-        selected_institutions = st.multiselect("🔍 Highlight Entities:", options=global_institutions)
+        selected_institutions = st.multiselect("🔍 Resaltar Entidades de la Red:", options=global_institutions)
 
-    # Core Query Segment filters
+    # Filtrado temporal según el corte de la Era
     df_periodo = df_final[df_final["year"] <= slider_year]
     if dropdown_area != 'All Areas':
         df_periodo = df_periodo[df_periodo['research_area'] == dropdown_area]
 
     G_filtrado = backend.build_network(df_periodo)
 
+    # Lógica de foco para aislamiento
     has_focus = len(selected_institutions) > 0
     focus_nodes = set(selected_institutions)
     if has_focus:
         for n in selected_institutions:
-            if n in G_filtrado: focus_nodes.update(G_filtrado.neighbors(n))
+            if n in G_filtrado: 
+                focus_nodes.update(G_filtrado.neighbors(n))
 
-    # Presentation Render Loop calling purely visual methods
+    # Inyección en layout final
     if G_filtrado.number_of_nodes() == 0:
         st.warning(text.EMPTY_DATA_WARNING)
     else:
@@ -93,5 +98,4 @@ elif st.session_state["active_tab"] == "Network":
             visuals.draw_network_graph(G_filtrado, pos_fija, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions)
         with col_barras:
             st.markdown(text.BAR_CHART_TITLE)
-            st.caption(text.BAR_CHART_CAPTION)
             visuals.draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes)
