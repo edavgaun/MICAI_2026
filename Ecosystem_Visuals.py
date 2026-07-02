@@ -128,7 +128,10 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
             color=alt.Color('Color:N', scale=None),
             opacity=alt.Opacity('Opacity:Q', scale=None),
             tooltip=['Institución', 'Papers']
-        ).properties(width='container', height=400)
+        ).properties(
+            width='container',
+            height=350  # Reducido ligeramente para dar espacio a la leyenda
+        )
         st.altair_chart(chart, use_container_width=True)
     else:
         st.info("Sin suficientes datos.")
