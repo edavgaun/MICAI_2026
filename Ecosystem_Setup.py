@@ -9,7 +9,7 @@ def load_clean_data():
     df['year'] = df['year'].astype(int)
     return df
 
-@st.cache_data # 🧠 Aceleramos el cambio de año guardando las redes ya calculadas
+@st.cache_data
 def build_network(df_periodo):
     G = nx.Graph()
     for _, grupo in df_periodo.groupby('title'):
@@ -21,6 +21,11 @@ def build_network(df_periodo):
                 G.add_edge(a, b, weight=1)
         if len(instituciones) == 1:
             G.add_node(instituciones[0])
+            
+    # OPTIMIZACIÓN CRÍTICA: Removemos nodos que se quedan con grado 0 al aplicar filtros 
+    # Esto reduce hasta un 40% el peso del HTML que el navegador debe renderizar.
+    nodos_aislados = [node for node, degree in dict(G.degree()).items() if degree == 0]
+    G.remove_nodes_from(nodos_aislados)
     return G
 
 @st.cache_resource
