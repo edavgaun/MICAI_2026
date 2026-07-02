@@ -1,0 +1,97 @@
+import streamlit as st
+
+# Explicit modular imports
+import Ecosystem_Setup as backend
+import Ecosystem_Content as text
+import Ecosystem_Visuals as visuals
+
+# System Page Setup
+st.set_page_config(layout="wide")
+
+# Inject viewport canvas tweaks to break Streamlit margins
+st.markdown("""
+    <style>
+        [data-testid="stImage"], [data-testid="stFigureGrid"], .stPlotlyChart { width: 100% !important; max-width: 100% !important; }
+        .block-container { padding-left: 2rem !important; padding-right: 2rem !important; padding-top: 1rem !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+# 1. State/Data Caching Initialization
+df_final = backend.load_clean_data()
+
+if "pos_fija" not in st.session_state:
+    st.session_state["pos_fija"] = backend.calcular_layout_fijo(df_final)
+pos_fija = st.session_state["pos_fija"]
+
+institution_country_map = df_final[['institution_clean', 'Country']].dropna().drop_duplicates().groupby('institution_clean')['Country'].first().to_dict()
+areas = sorted(df_final['research_area'].dropna().unique())
+
+# 2. Borderless Top Navigation Header
+if "active_tab" not in st.session_state:
+    st.session_state["active_tab"] = "Home"
+
+nav_col1, nav_col2, _ = st.columns([1.2, 1.2, 5])
+with nav_col1:
+    if st.button("🏠 Home Overview", use_container_width=True): st.session_state["active_tab"] = "Home"
+with nav_col2:
+    if st.button("🕸️ Network Discovery", use_container_width=True): st.session_state["active_tab"] = "Network"
+
+st.markdown("---")
+
+# ==============================================================================
+# WORKSPACE RUNTIME ROUTING
+# ==============================================================================
+if st.session_state["active_tab"] == "Home":
+    st.title(text.HOME_TITLE)
+    st.markdown(text.HOME_INTRO)
+
+elif st.session_state["active_tab"] == "Network":
+    st.title(text.APP_TITLE)
+    st.caption(text.APP_SUBTITLE)
+    
+    if "current_era_step" not in st.session_state:
+        st.session_state["current_era_step"] = 1
+
+    # Floating UI timeline stepping buttons
+    col_back, _, col_next = st.columns([2, 6, 2])
+    with col_back:
+        if st.button("⬅️ Previous Era") and st.session_state["current_era_step"] > 1: st.session_state["current_era_step"] -= 1
+    with col_next:
+        if st.button("Next Era ➡️") and st.session_state["current_era_step"] < 4: st.session_state["current_era_step"] += 1
+
+    active_step = st.session_state["current_era_step"]
+    slider_year = text.ERAS[active_step]["year"]
+    st.subheader(f"📖 {text.ERAS[active_step]['name']}")
+
+    # Dashboard Control Layer Rows
+    filter_col1, filter_col2 = st.columns(2)
+    with filter_col1:
+        dropdown_area = st.selectbox("Filter by Research Area:", ['All Areas'] + areas)
+    with filter_col2:
+        global_institutions = sorted(df_final['institution_clean'].dropna().unique())
+        selected_institutions = st.multiselect("🔍 Highlight Entities:", options=global_institutions)
+
+    # Core Query Segment filters
+    df_periodo = df_final[df_final["year"] <= slider_year]
+    if dropdown_area != 'All Areas':
+        df_periodo = df_periodo[df_periodo['research_area'] == dropdown_area]
+
+    G_filtrado = backend.build_network(df_periodo)
+
+    has_focus = len(selected_institutions) > 0
+    focus_nodes = set(selected_institutions)
+    if has_focus:
+        for n in selected_institutions:
+            if n in G_filtrado: focus_nodes.update(G_filtrado.neighbors(n))
+
+    # Presentation Render Loop calling purely visual methods
+    if G_filtrado.number_of_nodes() == 0:
+        st.warning(text.EMPTY_DATA_WARNING)
+    else:
+        col_red, col_barras = st.columns([7.5, 2.5])
+        with col_red:
+            visuals.draw_network_graph(G_filtrado, pos_fija, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions)
+        with col_barras:
+            st.markdown(text.BAR_CHART_TITLE)
+            st.caption(text.BAR_CHART_CAPTION)
+            visuals.draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes)
