@@ -7,11 +7,13 @@ import Ecosystem_Visuals as visuals
 
 st.set_page_config(layout="wide")
 
-# Rompemos contenedores internos rígidos de Streamlit
+# Forzado de CSS para eliminar los márgenes fijos del layout de Streamlit
 st.markdown("""
     <style>
         [data-testid="stImage"], [data-testid="stFigureGrid"], .stPlotlyChart { width: 100% !important; max-width: 100% !important; }
         .block-container { padding-left: 2rem !important; padding-right: 2rem !important; padding-top: 1rem !important; }
+        /* Estilo para que los botones de navegación superior se vean consistentes */
+        div.stButton > button { width: 100% !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -25,16 +27,17 @@ pos_fija = st.session_state["pos_fija"]
 institution_country_map = backend.obtener_mapeo_paises(df_final)
 areas = sorted(df_final['research_area'].dropna().unique())
 
-# Tabs superiores de navegación (Sin barras laterales molestas)
+# Barra de Navegación Superior Corregida: Asignamos pesos iguales [1, 1] 
+# para que no se amontonen y usamos una fila limpia.
 if "active_tab" not in st.session_state:
     st.session_state["active_tab"] = "Home"
 
-nav_col1, nav_col2, _ = st.columns([1.2, 1.2, 5])
+nav_col1, nav_col2 = st.columns(2)
 with nav_col1:
-    if st.button("🏠 Home Overview", use_container_width=True): 
+    if st.button("🏠 Home Overview", key="btn_home"): 
         st.session_state["active_tab"] = "Home"
 with nav_col2:
-    if st.button("🕸️ Network Discovery", use_container_width=True): 
+    if st.button("🕸️ Network Discovery", key="btn_network"): 
         st.session_state["active_tab"] = "Network"
 
 st.markdown("---")
@@ -53,13 +56,13 @@ elif st.session_state["active_tab"] == "Network":
     if "current_era_step" not in st.session_state:
         st.session_state["current_era_step"] = 1
 
-    # Navegación secuencial por páginas de Era estilo historia
-    col_back, _, col_next = st.columns([2, 6, 2])
+    # Botones de Era con pesos fijos para evitar colapsos visuales
+    col_back, col_spacer, col_next = st.columns([2, 6, 2])
     with col_back:
-        if st.button("⬅️ Anterior Era") and st.session_state["current_era_step"] > 1: 
+        if st.button("⬅️ Anterior Era", key="era_back") and st.session_state["current_era_step"] > 1: 
             st.session_state["current_era_step"] -= 1
     with col_next:
-        if st.button("Siguiente Era ➡️") and st.session_state["current_era_step"] < 4: 
+        if st.button("Siguiente Era ➡️", key="era_next") and st.session_state["current_era_step"] < 4: 
             st.session_state["current_era_step"] += 1
 
     active_step = st.session_state["current_era_step"]
