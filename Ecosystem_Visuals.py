@@ -97,7 +97,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         },
         "stabilization": {
           "enabled": true,
-          "iterations": 100,
+          "iterations": 200,
           "updateInterval": 25
         }
       },
@@ -115,8 +115,10 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         components.html(f.read(), height=760)
 
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
-    counts = df_periodo['institution_clean'].value_counts().head(10).reset_index()
+    # Ajuste metodológico: Conteo por títulos únicos para corregir el sesgo de coautorías internas
+    counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
     counts.columns = ['Institución', 'Papers']
+    counts = counts.sort_values(by='Papers', ascending=False).head(10)
     
     counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
     counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
