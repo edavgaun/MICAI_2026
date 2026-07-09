@@ -101,9 +101,18 @@ elif st.session_state["active_tab"] == "Network":
         col_red, col_barras = st.columns([7.5, 2.5])
         
         with col_red:
-            # El grafo interactivo se mantiene a la izquierda
-            visuals.draw_network_graph(G_filtrado, pos_fija, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions)
-        
+            # El grafo interactivo se mantiene a la izquierda (ahora recibe año y área para la exportación)
+            visuals.draw_network_graph(
+                G_filtrado, 
+                pos_fija, 
+                institution_country_map, 
+                df_periodo, 
+                has_focus, 
+                focus_nodes, 
+                selected_institutions,
+                selected_year,
+                dropdown_area
+            )
         with col_barras:
             # 1. Caja de Leyenda Técnica (Arriba)
             st.markdown(text.LEGEND_HTML, unsafe_allow_html=True)
