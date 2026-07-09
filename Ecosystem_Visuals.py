@@ -212,4 +212,84 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
             
-            ctx.strokeStyle = 'rgba(211, 211, 211,
+            ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
+            ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
+            
+            var dataUrl = tempCanvas.toDataURL('image/png');
+            var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
+            var filename = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
+            
+            var link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            var existingModal = document.getElementById('preview-modal');
+            if (existingModal) existingModal.remove();
+            
+            var modal = document.createElement('div');
+            modal.id = 'preview-modal';
+            modal.style.position = 'absolute';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(255,255,255,0.97)';
+            modal.style.zIndex = '10000';
+            modal.style.display = 'flex';
+            modal.style.flexDirection = 'column';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.fontFamily = 'sans-serif';
+            modal.style.padding = '20px';
+            modal.style.boxSizing = 'border-box';
+            
+            modal.innerHTML = `
+                <div style="text-align: center; margin-bottom: 12px; max-width: 550px;">
+                    <h3 style="margin: 0 0 5px 0; color: #111;">📸 Captura lista con Éxito</h3>
+                    <p style="margin: 0; font-size: 13px; color: #555;">Si la descarga no inició automáticamente, haz <b>clic derecho</b> sobre la imagen inferior y selecciona <b>"Guardar imagen como..."</b>.</p>
+                    <button id="close-modal-btn" style="margin-top: 10px; background: #ff4b4b; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Volver al Mapa Interactivo</button>
+                </div>
+                <img src="${{dataUrl}}" style="max-width: 95%; max-height: 75%; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius:4px;"/>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('close-modal-btn').addEventListener('click', function() {{
+                modal.remove();
+            }});
+            
+        }} catch (err) {{
+            alert('Error al componer la imagen de la red: ' + err.message);
+        }}
+    }});
+    </script>
+    """
+    
+    html_content = html_content.replace("</body>", js_injection + "</body>")
+    components.html(html_content, height=760)
+
+def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
+    counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
+    counts.columns = ['Institución', 'Papers']
+    counts = counts.sort_values(by='Papers', ascending=False).head(10)
+    
+    counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
+    counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
+
+    if not counts.empty:
+        chart = alt.Chart(counts).mark_bar(stroke='black', strokeWidth=1).encode(
+            x=alt.X('Papers:Q', title='Papers'),
+            y=alt.Y('Institución:N', sort='-x', title=None),
+            color=alt.Color('Color:N', scale=None),
+            opacity=alt.Opacity('Opacity:Q', scale=None),
+            tooltip=['Institución', 'Papers']
+        ).properties(
+            width='container',
+            height=350
+        )
+        st.altair_chart(chart, use_container_width=True)
+    else:
+        st.info("Sin suficientes datos.")
