@@ -4,6 +4,7 @@ import networkx as nx
 import streamlit as st
 import streamlit.components.v1 as components
 from pyvis.network import Network
+import json
 
 @st.cache_data
 def calcular_metricas_periodo(df_periodo):
@@ -20,6 +21,20 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     # 🌟 FILTRO DE RELEVANCIA: Identificar las 5 instituciones más grandes (con más papers)
     top_5_grandes = set(sorted(paper_count, key=paper_count.get, reverse=True)[:5])
     
+    # 📊 PREPARACIÓN DE DATOS PARA LA MINI GRÁFICA EN EL CANVAS
+    top_10_raw = sorted(paper_count.items(), key=lambda x: x[1], reverse=True)[:10]
+    bar_data_list = []
+    for idx, (inst, count) in enumerate(top_10_raw):
+        country = institution_country_map.get(inst, "Unknown")
+        color = '#2ca02c' if country == 'Mexico' else '#EBF6FF'
+        bar_data_list.append({
+            "name": inst,
+            "papers": int(count),
+            "is_top5": idx < 5,
+            "color": color
+        })
+    js_bar_data_json = json.dumps(bar_data_list)
+    
     # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y BORDES DESTACADOS
     for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
@@ -31,7 +46,6 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
             
-        # Forzamos etiquetas vacías para mantener el diseño limpio que funcionó en tu captura
         label_text = ""  
         
         if node_id in pos:
@@ -44,15 +58,13 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
         bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
         
-        # 🔴 LÓGICA DEL BORDE ROJO PARA EL TOP 5 MAS GRANDES
         if node_id in top_5_grandes:
-            border_color = "#FF0000"  # Rojo brillante
-            border_width = 3.5        # Más grueso para notar la jerarquía
+            border_color = "#FF0000"  
+            border_width = 3.5        
         else:
-            border_color = "#000000"  # Negro estándar para el resto
+            border_color = "#000000"  
             border_width = 1.2
         
-        # Si el usuario usa el buscador y resalta nodos, aplicamos la opacidad protectora
         if has_focus and node_id not in focus_nodes:
             bg_color = "rgba(200, 200, 200, 0.1)"
             border_color = "rgba(0,0,0,0.1)"
@@ -120,11 +132,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     
     nt.save_graph("temp_network.html")
     
-    # 4. INYECCIÓN JAVASCRIPT CON PLAN DE RESPALDO (MODAL) CONTRA BLOQUEOS DE IFRAME
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    js_injection = f"""
+    # 4. PLANTILLA DE EXPORTACIÓN CON MINI GRÁFICA DE BARRAS EN LA ESQUINA INFERIOR DERECHA
+    js_template = """
     <div id="download-container" style="position: absolute; top: 15px; right: 15px; z-index: 9999;">
         <button id="download-btn" style="
             background-color: #ff4b4b; 
@@ -143,13 +155,13 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         </button>
     </div>
     <script>
-    document.getElementById('download-btn').addEventListener('click', function() {{
-        try {{
+    document.getElementById('download-btn').addEventListener('click', function() {
+        try {
             var originalCanvas = document.querySelector('.vis-network canvas') || document.querySelector('canvas');
-            if (!originalCanvas) {{
+            if (!originalCanvas) {
                 alert('El lienzo del grafo aún no está listo. Intenta de nuevo en unos segundos.');
                 return;
-            }}
+            }
             
             var tempCanvas = document.createElement('canvas');
             tempCanvas.width = originalCanvas.width;
@@ -168,10 +180,10 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
             ctx.font = '15px sans-serif';
             ctx.fillStyle = '#555555';
-            ctx.fillText('Año de corte: ' + "{selected_year}", 35, 80);
-            ctx.fillText('Área de Investigación: ' + "{dropdown_area}", 35, 105);
+            ctx.fillText('Año de corte: __SELECTED_YEAR__', 35, 80);
+            ctx.fillText('Área de Investigación: __DROPDOWN_AREA__', 35, 105);
             
-            // --- CUADRO DE LEYENDA / NOMENCLATURA ---
+            // --- CUADRO DE LEYENDA / NOMENCLATURA (Esquina Inferior Izquierda) ---
             var boxWidth = 290;
             var boxHeight = 185;
             var x = 35;
@@ -180,11 +192,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.fillStyle = '#f8f9fa';
             ctx.strokeStyle = '#e0e0e0';
             ctx.lineWidth = 1.5;
-            if (ctx.roundRect) {{
+            if (ctx.roundRect) {
                 ctx.beginPath(); ctx.roundRect(x, y, boxWidth, boxHeight, 10); ctx.fill(); ctx.stroke();
-            }} else {{
+            } else {
                 ctx.fillRect(x, y, boxWidth, boxHeight); ctx.strokeRect(x, y, boxWidth, boxHeight);
-            }}
+            }
             
             ctx.fillStyle = '#222222';
             ctx.font = 'bold 15px sans-serif';
@@ -216,9 +228,72 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
             
+            // --- 📊 MINI GRÁFICA DE BARRAS INTEGRADA (Esquina Inferior Derecha) ---
+            var barData = __BAR_DATA__;
+            if (barData && barData.length > 0) {
+                var bWidth = 340;
+                var bHeight = 240;
+                var bx = tempCanvas.width - bWidth - 35;
+                var by = tempCanvas.height - bHeight - 35;
+                
+                // Fondo del contenedor de barras
+                ctx.fillStyle = '#f8f9fa';
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1.5;
+                if (ctx.roundRect) {
+                    ctx.beginPath(); ctx.roundRect(bx, by, bWidth, bHeight, 10); ctx.fill(); ctx.stroke();
+                } else {
+                    ctx.fillRect(bx, by, bWidth, bHeight); ctx.strokeRect(bx, by, bWidth, bHeight);
+                }
+                
+                // Título del gráfico interno
+                ctx.fillStyle = '#222222';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText('📊 Top 10 Volumen', bx + 15, by + 25);
+                
+                var maxPapers = barData[0].papers;
+                var maxBarWidth = 140; 
+                
+                ctx.font = '11px sans-serif';
+                for (var i = 0; i < barData.length; i++) {
+                    var item = barData[i];
+                    var rowY = by + 45 + (i * 18);
+                    
+                    // Texto de la Institución (Truncado de forma segura si es largo)
+                    ctx.fillStyle = '#333333';
+                    ctx.textAlign = 'left';
+                    var displayName = item.name;
+                    if (displayName.length > 20) displayName = displayName.substring(0, 18) + '...';
+                    ctx.fillText(displayName, bx + 15, rowY + 10);
+                    
+                    // Dibujo de la barra
+                    var barW = (item.papers / maxPapers) * maxBarWidth;
+                    if (barW < 3) barW = 3;
+                    
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(bx + 140, rowY, barW, 12);
+                    
+                    // Borde condicional: Rojo grueso para Top 5, negro sutil para el resto
+                    if (item.is_top5) {
+                        ctx.strokeStyle = '#FF0000';
+                        ctx.lineWidth = 1.8;
+                    } else {
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 0.5;
+                    }
+                    ctx.strokeRect(bx + 140, rowY, barW, 12);
+                    
+                    // Número indicador de papers al final de la barra
+                    ctx.fillStyle = '#555555';
+                    ctx.fillText(item.papers, bx + 146 + barW, rowY + 10);
+                }
+                ctx.textAlign = 'left'; // Restaurar alineación estándar
+            }
+            
+            // --- DISPARAR DESCARGA AUTOMÁTICA ---
             var dataUrl = tempCanvas.toDataURL('image/png');
-            var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
-            var filename = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
+            var safeAreaName = "__DROPDOWN_AREA__".replace(/[^a-zA-Z0-9]/g, "_");
+            var filename = 'Red_IA_Mexico_' + '__SELECTED_YEAR__' + '_' + safeAreaName + '.png';
             
             var link = document.createElement('a');
             link.download = filename;
@@ -227,6 +302,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             link.click();
             document.body.removeChild(link);
             
+            // --- VENTANA DE RESPALDO INTERNA CONTRA BLOQUEOS ---
             var existingModal = document.getElementById('preview-modal');
             if (existingModal) existingModal.remove();
             
@@ -253,38 +329,50 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                     <p style="margin: 0; font-size: 13px; color: #555;">Si la descarga no inició automáticamente, haz <b>clic derecho</b> sobre la imagen inferior y selecciona <b>"Guardar imagen como..."</b>.</p>
                     <button id="close-modal-btn" style="margin-top: 10px; background: #ff4b4b; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Volver al Mapa Interactivo</button>
                 </div>
-                <img src="${{dataUrl}}" style="max-width: 95%; max-height: 75%; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius:4px;"/>
+                <img src="${dataUrl}" style="max-width: 95%; max-height: 75%; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius:4px;"/>
             `;
             
             document.body.appendChild(modal);
-            document.getElementById('close-modal-btn').addEventListener('click', function() {{
+            document.getElementById('close-modal-btn').addEventListener('click', function() {
                 modal.remove();
-            }});
+            });
             
-        }} catch (err) {{
+        } catch (err) {
             alert('Error al componer la imagen de la red: ' + err.message);
-        }}
-    }});
+        }
+    });
     </script>
     """
+    
+    # Inyección segura mediante reemplazos directos de texto controlado
+    js_injection = js_template.replace("__SELECTED_YEAR__", str(selected_year)).replace("__DROPDOWN_AREA__", str(dropdown_area)).replace("__BAR_DATA__", js_bar_data_json)
     
     html_content = html_content.replace("</body>", js_injection + "</body>")
     components.html(html_content, height=760)
 
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
+    """Dibuja el gráfico de volumen de la UI de Streamlit remarcando el Top 5 con borde rojo."""
     counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
     counts.columns = ['Institución', 'Papers']
-    counts = counts.sort_values(by='Papers', ascending=False).head(10)
+    counts = counts.sort_values(by='Papers', ascending=False).head(10).reset_index(drop=True)
     
     counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
     counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
+    
+    # 🔴 AGREGAR COLUMNAS DE BORDE CONDICIONAL PARA EL TOP 5 EN LA INTERFAZ ALTAIR
+    counts['StrokeColor'] = '#000000'
+    counts.loc[0:4, 'StrokeColor'] = '#FF0000'
+    counts['StrokeWidth'] = 1.0
+    counts.loc[0:4, 'StrokeWidth'] = 2.2
 
     if not counts.empty:
-        chart = alt.Chart(counts).mark_bar(stroke='black', strokeWidth=1).encode(
+        chart = alt.Chart(counts).mark_bar().encode(
             x=alt.X('Papers:Q', title='Papers'),
             y=alt.Y('Institución:N', sort='-x', title=None),
             color=alt.Color('Color:N', scale=None),
             opacity=alt.Opacity('Opacity:Q', scale=None),
+            stroke=alt.Color('StrokeColor:N', scale=None),
+            strokeWidth=alt.Size('StrokeWidth:Q', scale=None),
             tooltip=['Institución', 'Papers']
         ).properties(
             width='container',
