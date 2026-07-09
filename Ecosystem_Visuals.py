@@ -17,10 +17,10 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     paper_count = calcular_metricas_periodo(df_periodo)
     num_nodos = len(G.nodes())
     
-    # 🌟 FILTRO DE RELEVANCIA: Identificar las 10 instituciones con más volumen en este corte
+    # 🌟 FILTRO DE RELEVANCIA: Identificar las 10 instituciones con más volumen en este periodo
     top_relevantes = set(sorted(paper_count, key=paper_count.get, reverse=True)[:10])
     
-    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y ETIQUETAS INTELIGENTES
+    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y ETIQUETAS FIJAS INTELIGENTES
     for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
@@ -31,15 +31,16 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
             
-        # 🧠 LÓGICA DE NOMBRES DINÁMICOS:
-        # Se muestra el nombre si está en el Top 10 o si el usuario la buscó activamente.
+        # 🧠 LÓGICA DE NOMBRES FIJOS:
+        # Mostramos el texto fijo si pertenece al Top 10 o si fue buscada en el multiselect
         if node_id in top_relevantes or node_id in selected_institutions:
             label_text = node_id
-            # Si es un gigante de la red (>15 papers), le damos más peso visual al texto
-            font_size = 15 if p_count > 15 else 12 
+            font_size = 14 if p_count > 15 else 12
+            font_color = "#111111"
         else:
-            label_text = ""  # Se mantiene limpio; el nombre aparece solo al pasar el mouse (Tooltip)
-            font_size = 10
+            label_text = ""  # Se mantiene limpio para evitar saturar; se ve solo al pasar el mouse
+            font_size = 0
+            font_color = "rgba(0,0,0,0)"
         
         if node_id in pos:
             x_pos = pos[node_id][0] * 250
@@ -51,7 +52,6 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
         bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
         border_color = "black"
-        font_color = "#1e1e1e" if (node_id in top_relevantes) else "#666666"
         
         if has_focus and node_id not in focus_nodes:
             bg_color = "rgba(200, 200, 200, 0.1)"
@@ -66,11 +66,12 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             y=y_pos,
             borderWidth=1.2,
             color={'background': bg_color, 'border': border_color},
-            font={'size': font_size, 'color': font_color, 'face': 'sans-serif', 'strokeWidth': 2, 'strokeColor': '#ffffff'},
+            # Se añade un stroke (contorno blanco) para que las letras sean legibles sobre las líneas del grafo
+            font={'size': font_size, 'color': font_color, 'face': 'sans-serif', 'strokeWidth': 3, 'strokeColor': '#ffffff'},
             title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         )
 
-    # 2. CONSTRUCCIÓN DE ARISTAS
+    # 2. CONSTRUCCIÓN DE ARISTAS (CORREGIDO EL ERROR DE SINTAXIS COLOR)
     for u, v in G.edges():
         edge_data = G.get_edge_data(u, v) or G.get_edge_data(v, u) or {}
         peso = edge_data.get("weight", 1)
@@ -84,7 +85,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         elif country_u != "Mexico" and country_v != "Mexico":
             edge_color = "rgba(211, 211, 211, 0.3)"
         else:
-            edge_color = "rgba(255, 127,  Orange, 0.5)"
+            edge_color = "rgba(255, 127, 14, 0.5)" # <- ARREGLADO: Ya no dice "Orange"
 
         if has_focus and (u not in selected_institutions and v not in selected_institutions):
             edge_color = "rgba(200, 200, 200, 0.01)"
