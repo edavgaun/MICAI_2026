@@ -31,16 +31,18 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
             
-        # 🧠 LÓGICA DE NOMBRES FIJOS:
-        # Mostramos el texto fijo si pertenece al Top 10 o si fue buscada en el multiselect
+        # 🧠 LÓGICA DE NOMBRES FIJOS CORREGIDA:
+        # Si pertenece al Top 10 o fue buscada en el multiselect, se activa el texto fijo.
         if node_id in top_relevantes or node_id in selected_institutions:
             label_text = node_id
             font_size = 14 if p_count > 15 else 12
             font_color = "#111111"
         else:
-            label_text = ""  # Se mantiene limpio para evitar saturar; se ve solo al pasar el mouse
-            font_size = 0
-            font_color = "rgba(0,0,0,0)"
+            # CORRECCIÓN CRÍTICA: Dejar la etiqueta vacía oculta el texto nativamente.
+            # Mantener valores numéricos estándar de fuente (como 10) evita que el motor de Canvas falle.
+            label_text = ""  
+            font_size = 10
+            font_color = "#333333"
         
         if node_id in pos:
             x_pos = pos[node_id][0] * 250
@@ -66,12 +68,12 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             y=y_pos,
             borderWidth=1.2,
             color={'background': bg_color, 'border': border_color},
-            # Se añade un stroke (contorno blanco) para que las letras sean legibles sobre las líneas del grafo
+            # Un stroke (contorno blanco) de 3px garantiza legibilidad sobre las aristas
             font={'size': font_size, 'color': font_color, 'face': 'sans-serif', 'strokeWidth': 3, 'strokeColor': '#ffffff'},
             title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         )
 
-    # 2. CONSTRUCCIÓN DE ARISTAS (CORREGIDO EL ERROR DE SINTAXIS COLOR)
+    # 2. CONSTRUCCIÓN DE ARISTAS
     for u, v in G.edges():
         edge_data = G.get_edge_data(u, v) or G.get_edge_data(v, u) or {}
         peso = edge_data.get("weight", 1)
@@ -85,7 +87,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         elif country_u != "Mexico" and country_v != "Mexico":
             edge_color = "rgba(211, 211, 211, 0.3)"
         else:
-            edge_color = "rgba(255, 127, 14, 0.5)" # <- ARREGLADO: Ya no dice "Orange"
+            edge_color = "rgba(255, 127, 14, 0.5)"
 
         if has_focus and (u not in selected_institutions and v not in selected_institutions):
             edge_color = "rgba(200, 200, 200, 0.01)"
