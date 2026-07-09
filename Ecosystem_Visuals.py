@@ -107,7 +107,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     
     nt.save_graph("temp_network.html")
     
-    # 4. INYECCIÓN JAVASCRIPT CORREGIDA
+    # 4. INYECCIÓN JAVASCRIPT CON PLAN DE RESPALDO (MODAL) CONTRA BLOQUEOS DE IFRAME
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
@@ -131,96 +131,140 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     </div>
     <script>
     document.getElementById('download-btn').addEventListener('click', function() {{
-        var originalCanvas = document.querySelector('canvas');
-        if (!originalCanvas) {{
-            alert('Error al acceder al lienzo del mapa.');
-            return;
+        try {{
+            var originalCanvas = document.querySelector('.vis-network canvas') || document.querySelector('canvas');
+            if (!originalCanvas) {{
+                alert('El lienzo del grafo aún no está listo. Intenta de nuevo en unos segundos.');
+                return;
+            }}
+            
+            // Crear lienzo temporal para componer la imagen final
+            var tempCanvas = document.createElement('canvas');
+            tempCanvas.width = originalCanvas.width;
+            tempCanvas.height = originalCanvas.height;
+            var ctx = tempCanvas.getContext('2d');
+            
+            // Fondo blanco para evitar transparencias extrañas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Re-dibujar el lienzo original de la red
+            ctx.drawImage(originalCanvas, 0, 0);
+            
+            // --- TEXTO DE METADATOS (Esquina Superior Izquierda) ---
+            ctx.fillStyle = '#1e1e1e';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.fillText('Ecosistema de IA en México', 35, 50);
+            
+            ctx.font = '15px sans-serif';
+            ctx.fillStyle = '#555555';
+            ctx.fillText('Año de corte: ' + "{selected_year}", 35, 80);
+            ctx.fillText('Área de Investigación: ' + "{dropdown_area}", 35, 105);
+            
+            // --- CUADRO DE LEYENDA / NOMENCLATURA (Esquina Inferior Izquierda) ---
+            var boxWidth = 290;
+            var boxHeight = 185;
+            var x = 35;
+            var y = tempCanvas.height - boxHeight - 35;
+            
+            ctx.fillStyle = '#f8f9fa';
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1.5;
+            if (ctx.roundRect) {{
+                ctx.beginPath(); ctx.roundRect(x, y, boxWidth, boxHeight, 10); ctx.fill(); ctx.stroke();
+            }} else {{
+                ctx.fillRect(x, y, boxWidth, boxHeight); ctx.strokeRect(x, y, boxWidth, boxHeight);
+            }}
+            
+            // Título de la Guía
+            ctx.fillStyle = '#222222';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.fillText('📍 Guía de la Red', x + 15, y + 28);
+            
+            // Línea decorativa verde
+            ctx.strokeStyle = '#2ca02c';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(x + 15, y + 36); ctx.lineTo(x + 130, y + 36); ctx.stroke();
+            
+            ctx.font = '13px sans-serif';
+            
+            // Nodo México
+            ctx.fillStyle = '#2ca02c';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(x + 25, y + 60, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Institución México', x + 45, y + 64);
+            
+            // Nodo Extranjero
+            ctx.fillStyle = '#EBF6FF';
+            ctx.beginPath(); ctx.arc(x + 25, y + 82, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Institución Extranjero', x + 45, y + 86);
+            
+            // Arista Nacional
+            ctx.strokeStyle = 'rgba(44, 160, 44, 0.8)'; ctx.lineWidth = 3.5;
+            ctx.beginPath(); ctx.moveTo(x + 15, y + 112); ctx.lineTo(x + 35, y + 112); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Nacional (Mx-Mx)', x + 45, y + 116);
+            
+            // Arista Internacional
+            ctx.strokeStyle = 'rgba(255, 127, 14, 0.8)';
+            ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
+            
+            // Arista Global
+            ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
+            ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
+            ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
+            
+            // Procesar url de datos e intentar descarga directa por si acaso
+            var dataUrl = tempCanvas.toDataURL('image/png');
+            var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
+            var filename = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
+            
+            var link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // --- SISTEMA DE RESPALDO VISUAL (MODAL SUPERPUESTO) ---
+            var existingModal = document.getElementById('preview-modal');
+            if (existingModal) existingModal.remove();
+            
+            var modal = document.createElement('div');
+            modal.id = 'preview-modal';
+            modal.style.position = 'absolute';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(255,255,255,0.97)';
+            modal.style.zIndex = '10000';
+            modal.style.display = 'flex';
+            modal.style.flexDirection = 'column';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.fontFamily = 'sans-serif';
+            modal.style.padding = '20px';
+            modal.style.boxSizing = 'border-box';
+            
+            modal.innerHTML = `
+                <div style="text-align: center; margin-bottom: 12px; max-width: 550px;">
+                    <h3 style="margin: 0 0 5px 0; color: #111;">📸 Captura lista con Éxito</h3>
+                    <p style="margin: 0; font-size: 13px; color: #555;">Si la descarga no inició automáticamente, haz <b>clic derecho</b> sobre la imagen inferior y selecciona <b>"Guardar imagen como..."</b>.</p>
+                    <button id="close-modal-btn" style="margin-top: 10px; background: #ff4b4b; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Volver al Mapa Interactivo</button>
+                </div>
+                <img src="${{dataUrl}}" style="max-width: 95%; max-height: 75%; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius:4px;"/>
+            `;
+            
+            document.body.appendChild(modal);
+            document.getElementById('close-modal-btn').addEventListener('click', function() {{
+                modal.remove();
+            }});
+            
+        }} catch (err) {{
+            alert('Error al componer la imagen de la red: ' + err.message);
         }}
-        
-        // Crear un lienzo temporal para componer la imagen final
-        var tempCanvas = document.createElement('canvas');
-        tempCanvas.width = originalCanvas.width;
-        tempCanvas.height = originalCanvas.height;
-        var ctx = tempCanvas.getContext('2d');
-        
-        // Fondo blanco sólido
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-        
-        // CORRECCIÓN AQUÍ: Se cambió el comentario de # a // para evitar romper JS
-        ctx.drawImage(originalCanvas, 0, 0);
-        
-        // --- TEXTO DE METADATOS (Esquina Superior Izquierda) ---
-        ctx.fillStyle = '#1e1e1e';
-        ctx.font = 'bold 24px sans-serif';
-        ctx.fillText('Ecosistema de IA en México', 35, 50);
-        
-        ctx.font = '15px sans-serif';
-        ctx.fillStyle = '#555555';
-        ctx.fillText('Año de corte: ' + "{selected_year}", 35, 80);
-        ctx.fillText('Área de Investigación: ' + "{dropdown_area}", 35, 105);
-        
-        // --- CUADRO DE LEYENDA / NOMENCLATURA (Esquina Inferior Izquierda) ---
-        var boxWidth = 280;
-        var boxHeight = 180;
-        var x = 35;
-        var y = tempCanvas.height - boxHeight - 35;
-        
-        // Fondo del cuadro
-        ctx.fillStyle = '#f8f9fa';
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1.5;
-        if (ctx.roundRect) {{
-            ctx.beginPath(); ctx.roundRect(x, y, boxWidth, boxHeight, 10); ctx.fill(); ctx.stroke();
-        }} else {{
-            ctx.fillRect(x, y, boxWidth, boxHeight); ctx.strokeRect(x, y, boxWidth, boxHeight);
-        }}
-        
-        // Título de la Guía
-        ctx.fillStyle = '#222222';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.fillText('📍 Guía de la Red', x + 15, y + 28);
-        
-        // Línea decorativa verde
-        ctx.strokeStyle = '#2ca02c';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath(); ctx.moveTo(x + 15, y + 36); ctx.lineTo(x + 130, y + 36); ctx.stroke();
-        
-        ctx.font = '13px sans-serif';
-        
-        // Nodo México
-        ctx.fillStyle = '#2ca02c';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(x + 25, y + 60, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#333333'; ctx.fillText('Institución México', x + 45, y + 64);
-        
-        // Nodo Extranjero
-        ctx.fillStyle = '#EBF6FF';
-        ctx.beginPath(); ctx.arc(x + 25, y + 82, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#333333'; ctx.fillText('Institución Extranjero', x + 45, y + 86);
-        
-        // Arista Nacional (Mx-Mx)
-        ctx.strokeStyle = 'rgba(44, 160, 44, 0.8)'; ctx.lineWidth = 3.5;
-        ctx.beginPath(); ctx.moveTo(x + 15, y + 112); ctx.lineTo(x + 35, y + 112); ctx.stroke();
-        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Nacional (Mx-Mx)', x + 45, y + 116);
-        
-        // Arista Internacional (Mx-Ext)
-        ctx.strokeStyle = 'rgba(255, 127, 14, 0.8)';
-        ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
-        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
-        
-        // Arista Global (Ext-Ext)
-        ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
-        ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
-        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
-        
-        // --- DETONAR DESCARGA ---
-        var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
-        var link = document.createElement('a');
-        link.download = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
-        link.href = tempCanvas.toDataURL('image/png');
-        link.click();
     }});
     </script>
     """
@@ -228,9 +272,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     html_content = html_content.replace("</body>", js_injection + "</body>")
     components.html(html_content, height=760)
 
-    
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
-    # Ajuste metodológico: Conteo por títulos únicos para corregir el sesgo de coautorías internas
     counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
     counts.columns = ['Institución', 'Papers']
     counts = counts.sort_values(by='Papers', ascending=False).head(10)
@@ -247,7 +289,7 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
             tooltip=['Institución', 'Papers']
         ).properties(
             width='container',
-            height=350  # Reducido ligeramente para dar espacio a la leyenda
+            height=350
         )
         st.altair_chart(chart, use_container_width=True)
     else:
