@@ -11,13 +11,16 @@ def calcular_metricas_periodo(df_periodo):
     return df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
 
 def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions, selected_year, dropdown_area):
-    """Dibuja la red interactiva con tamaños jerárquicos reales y un botón para descargar como imagen con nomenclatura."""
+    """Dibuja la red interactiva mostrando fijos los nombres del Top 10 de instituciones más relevantes."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
     
     paper_count = calcular_metricas_periodo(df_periodo)
     num_nodos = len(G.nodes())
     
-    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y JERÁRQUICOS
+    # 🌟 FILTRO DE RELEVANCIA: Identificar las 10 instituciones con más volumen en este corte
+    top_relevantes = set(sorted(paper_count, key=paper_count.get, reverse=True)[:10])
+    
+    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y ETIQUETAS INTELIGENTES
     for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
@@ -27,6 +30,16 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             size_value = 6
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
+            
+        # 🧠 LÓGICA DE NOMBRES DINÁMICOS:
+        # Se muestra el nombre si está en el Top 10 o si el usuario la buscó activamente.
+        if node_id in top_relevantes or node_id in selected_institutions:
+            label_text = node_id
+            # Si es un gigante de la red (>15 papers), le damos más peso visual al texto
+            font_size = 15 if p_count > 15 else 12 
+        else:
+            label_text = ""  # Se mantiene limpio; el nombre aparece solo al pasar el mouse (Tooltip)
+            font_size = 10
         
         if node_id in pos:
             x_pos = pos[node_id][0] * 250
@@ -38,7 +51,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
         bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
         border_color = "black"
-        font_color = "#333333"
+        font_color = "#1e1e1e" if (node_id in top_relevantes) else "#666666"
         
         if has_focus and node_id not in focus_nodes:
             bg_color = "rgba(200, 200, 200, 0.1)"
@@ -47,13 +60,13 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
         nt.add_node(
             node_id,
-            label=node_id,
+            label=label_text,
             size=size_value,
             x=x_pos,
             y=y_pos,
             borderWidth=1.2,
             color={'background': bg_color, 'border': border_color},
-            font={'size': 11, 'color': font_color},
+            font={'size': font_size, 'color': font_color, 'face': 'sans-serif', 'strokeWidth': 2, 'strokeColor': '#ffffff'},
             title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         )
 
@@ -71,7 +84,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         elif country_u != "Mexico" and country_v != "Mexico":
             edge_color = "rgba(211, 211, 211, 0.3)"
         else:
-            edge_color = "rgba(255, 127, 14, 0.5)"
+            edge_color = "rgba(255, 127,  Orange, 0.5)"
 
         if has_focus and (u not in selected_institutions and v not in selected_institutions):
             edge_color = "rgba(200, 200, 200, 0.01)"
@@ -138,20 +151,17 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                 return;
             }}
             
-            // Crear lienzo temporal para componer la imagen final
             var tempCanvas = document.createElement('canvas');
             tempCanvas.width = originalCanvas.width;
             tempCanvas.height = originalCanvas.height;
             var ctx = tempCanvas.getContext('2d');
             
-            // Fondo blanco para evitar transparencias extrañas
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             
-            // Re-dibujar el lienzo original de la red
             ctx.drawImage(originalCanvas, 0, 0);
             
-            // --- TEXTO DE METADATOS (Esquina Superior Izquierda) ---
+            // --- TEXTO DE METADATOS ---
             ctx.fillStyle = '#1e1e1e';
             ctx.font = 'bold 24px sans-serif';
             ctx.fillText('Ecosistema de IA en México', 35, 50);
@@ -161,7 +171,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.fillText('Año de corte: ' + "{selected_year}", 35, 80);
             ctx.fillText('Área de Investigación: ' + "{dropdown_area}", 35, 105);
             
-            // --- CUADRO DE LEYENDA / NOMENCLATURA (Esquina Inferior Izquierda) ---
+            // --- CUADRO DE LEYENDA / NOMENCLATURA ---
             var boxWidth = 290;
             var boxHeight = 185;
             var x = 35;
@@ -176,46 +186,36 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                 ctx.fillRect(x, y, boxWidth, boxHeight); ctx.strokeRect(x, y, boxWidth, boxHeight);
             }}
             
-            // Título de la Guía
             ctx.fillStyle = '#222222';
             ctx.font = 'bold 15px sans-serif';
             ctx.fillText('📍 Guía de la Red', x + 15, y + 28);
             
-            // Línea decorativa verde
             ctx.strokeStyle = '#2ca02c';
             ctx.lineWidth = 2.5;
             ctx.beginPath(); ctx.moveTo(x + 15, y + 36); ctx.lineTo(x + 130, y + 36); ctx.stroke();
             
             ctx.font = '13px sans-serif';
             
-            // Nodo México
-            ctx.fillStyle = '#2ca02c';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1;
+            ctx.fillStyle = '#2ca02c'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 1;
             ctx.beginPath(); ctx.arc(x + 25, y + 60, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Institución México', x + 45, y + 64);
             
-            // Nodo Extranjero
             ctx.fillStyle = '#EBF6FF';
             ctx.beginPath(); ctx.arc(x + 25, y + 82, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Institución Extranjero', x + 45, y + 86);
             
-            // Arista Nacional
             ctx.strokeStyle = 'rgba(44, 160, 44, 0.8)'; ctx.lineWidth = 3.5;
             ctx.beginPath(); ctx.moveTo(x + 15, y + 112); ctx.lineTo(x + 35, y + 112); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Nacional (Mx-Mx)', x + 45, y + 116);
             
-            // Arista Internacional
             ctx.strokeStyle = 'rgba(255, 127, 14, 0.8)';
             ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
             
-            // Arista Global
             ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
             ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
             
-            // Procesar url de datos e intentar descarga directa por si acaso
             var dataUrl = tempCanvas.toDataURL('image/png');
             var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
             var filename = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
@@ -227,7 +227,6 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             link.click();
             document.body.removeChild(link);
             
-            // --- SISTEMA DE RESPALDO VISUAL (MODAL SUPERPUESTO) ---
             var existingModal = document.getElementById('preview-modal');
             if (existingModal) existingModal.remove();
             
