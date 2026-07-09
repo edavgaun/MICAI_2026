@@ -11,16 +11,16 @@ def calcular_metricas_periodo(df_periodo):
     return df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
 
 def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions, selected_year, dropdown_area):
-    """Dibuja la red interactiva mostrando fijos los nombres del Top 10 de instituciones más relevantes."""
+    """Dibuja la red interactiva destacando con borde rojo los 5 nodos más grandes."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
     
     paper_count = calcular_metricas_periodo(df_periodo)
     num_nodos = len(G.nodes())
     
-    # 🌟 FILTRO DE RELEVANCIA: Identificar las 10 instituciones con más volumen en este periodo
-    top_relevantes = set(sorted(paper_count, key=paper_count.get, reverse=True)[:10])
+    # 🌟 FILTRO DE RELEVANCIA: Identificar las 5 instituciones más grandes (con más papers)
+    top_5_grandes = set(sorted(paper_count, key=paper_count.get, reverse=True)[:5])
     
-    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y ETIQUETAS FIJAS INTELIGENTES
+    # 1. CONSTRUCCIÓN DE NODOS CON TAMAÑOS REALES Y BORDES DESTACADOS
     for i, node_id in enumerate(G.nodes()):
         country = institution_country_map.get(node_id, "Unknown")
         is_mexico = country == "Mexico"
@@ -31,18 +31,8 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
             
-        # 🧠 LÓGICA DE NOMBRES FIJOS CORREGIDA:
-        # Si pertenece al Top 10 o fue buscada en el multiselect, se activa el texto fijo.
-        if node_id in top_relevantes or node_id in selected_institutions:
-            label_text = node_id
-            font_size = 14 if p_count > 15 else 12
-            font_color = "#111111"
-        else:
-            # CORRECCIÓN CRÍTICA: Dejar la etiqueta vacía oculta el texto nativamente.
-            # Mantener valores numéricos estándar de fuente (como 10) evita que el motor de Canvas falle.
-            label_text = ""  
-            font_size = 10
-            font_color = "#333333"
+        # Forzamos etiquetas vacías para mantener el diseño limpio que funcionó en tu captura
+        label_text = ""  
         
         if node_id in pos:
             x_pos = pos[node_id][0] * 250
@@ -53,12 +43,20 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             y_pos = np.sin(angulo) * 550
             
         bg_color = "#2ca02c" if is_mexico else "#EBF6FF"
-        border_color = "black"
         
+        # 🔴 LÓGICA DEL BORDE ROJO PARA EL TOP 5 MAS GRANDES
+        if node_id in top_5_grandes:
+            border_color = "#FF0000"  # Rojo brillante
+            border_width = 3.5        # Más grueso para notar la jerarquía
+        else:
+            border_color = "#000000"  # Negro estándar para el resto
+            border_width = 1.2
+        
+        # Si el usuario usa el buscador y resalta nodos, aplicamos la opacidad protectora
         if has_focus and node_id not in focus_nodes:
             bg_color = "rgba(200, 200, 200, 0.1)"
             border_color = "rgba(0,0,0,0.1)"
-            font_color = "rgba(0,0,0,0.1)"
+            border_width = 1.2
             
         nt.add_node(
             node_id,
@@ -66,10 +64,9 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             size=size_value,
             x=x_pos,
             y=y_pos,
-            borderWidth=1.2,
+            borderWidth=border_width,
             color={'background': bg_color, 'border': border_color},
-            # Un stroke (contorno blanco) de 3px garantiza legibilidad sobre las aristas
-            font={'size': font_size, 'color': font_color, 'face': 'sans-serif', 'strokeWidth': 3, 'strokeColor': '#ffffff'},
+            font={'size': 10, 'color': '#333333', 'face': 'sans-serif'},
             title=f"Institución: {node_id}\nPaís: {country}\nPapers: {p_count}"
         )
 
@@ -215,84 +212,4 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
             
-            ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
-            ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
-            ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
-            
-            var dataUrl = tempCanvas.toDataURL('image/png');
-            var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
-            var filename = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
-            
-            var link = document.createElement('a');
-            link.download = filename;
-            link.href = dataUrl;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            var existingModal = document.getElementById('preview-modal');
-            if (existingModal) existingModal.remove();
-            
-            var modal = document.createElement('div');
-            modal.id = 'preview-modal';
-            modal.style.position = 'absolute';
-            modal.style.top = '0';
-            modal.style.left = '0';
-            modal.style.width = '100%';
-            modal.style.height = '100%';
-            modal.style.backgroundColor = 'rgba(255,255,255,0.97)';
-            modal.style.zIndex = '10000';
-            modal.style.display = 'flex';
-            modal.style.flexDirection = 'column';
-            modal.style.alignItems = 'center';
-            modal.style.justifyContent = 'center';
-            modal.style.fontFamily = 'sans-serif';
-            modal.style.padding = '20px';
-            modal.style.boxSizing = 'border-box';
-            
-            modal.innerHTML = `
-                <div style="text-align: center; margin-bottom: 12px; max-width: 550px;">
-                    <h3 style="margin: 0 0 5px 0; color: #111;">📸 Captura lista con Éxito</h3>
-                    <p style="margin: 0; font-size: 13px; color: #555;">Si la descarga no inició automáticamente, haz <b>clic derecho</b> sobre la imagen inferior y selecciona <b>"Guardar imagen como..."</b>.</p>
-                    <button id="close-modal-btn" style="margin-top: 10px; background: #ff4b4b; color: white; border: none; padding: 7px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Volver al Mapa Interactivo</button>
-                </div>
-                <img src="${{dataUrl}}" style="max-width: 95%; max-height: 75%; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius:4px;"/>
-            `;
-            
-            document.body.appendChild(modal);
-            document.getElementById('close-modal-btn').addEventListener('click', function() {{
-                modal.remove();
-            }});
-            
-        }} catch (err) {{
-            alert('Error al componer la imagen de la red: ' + err.message);
-        }}
-    }});
-    </script>
-    """
-    
-    html_content = html_content.replace("</body>", js_injection + "</body>")
-    components.html(html_content, height=760)
-
-def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
-    counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
-    counts.columns = ['Institución', 'Papers']
-    counts = counts.sort_values(by='Papers', ascending=False).head(10)
-    
-    counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
-    counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
-
-    if not counts.empty:
-        chart = alt.Chart(counts).mark_bar(stroke='black', strokeWidth=1).encode(
-            x=alt.X('Papers:Q', title='Papers'),
-            y=alt.Y('Institución:N', sort='-x', title=None),
-            color=alt.Color('Color:N', scale=None),
-            opacity=alt.Opacity('Opacity:Q', scale=None),
-            tooltip=['Institución', 'Papers']
-        ).properties(
-            width='container',
-            height=350
-        )
-        st.altair_chart(chart, use_container_width=True)
-    else:
-        st.info("Sin suficientes datos.")
+            ctx.strokeStyle = 'rgba(211, 211, 211,
