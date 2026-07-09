@@ -135,7 +135,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # 4. PLANTILLA DE EXPORTACIÓN CON UN CANVAS ALTA RESOLUCIÓN PARA LAS BARRAS (750x530)
+    # 4. PLANTILLA DE EXPORTACIÓN CORREGIDA (Comentarios JS arreglados)
     js_template = """
     <div id="download-container" style="position: absolute; top: 15px; right: 15px; z-index: 9999;">
         <button id="download-btn" style="
@@ -231,12 +231,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             // --- 📊 CONTENEDOR GIGANTE DE ALTA RESOLUCIÓN PARA BARRAS (Esquina Inferior Derecha) ---
             var barData = __BAR_DATA__;
             if (barData && barData.length > 0) {
-                var bWidth = 750;  // ¡Gran incremento de área para legibilidad cristalina!
+                var bWidth = 750;  
                 var bHeight = 530; 
                 var bx = tempCanvas.width - bWidth - 35;
                 var by = tempCanvas.height - bHeight - 35;
                 
-                // Cuadro contenedor
                 ctx.fillStyle = '#f8f9fa';
                 ctx.strokeStyle = '#e0e0e0';
                 ctx.lineWidth = 2.0;
@@ -246,19 +245,17 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                     ctx.fillRect(bx, by, bWidth, bHeight); ctx.strokeRect(bx, by, bWidth, bHeight);
                 }
                 
-                // Título de la sección de barras ampliado
                 ctx.fillStyle = '#111111';
                 ctx.font = 'bold 24px sans-serif';
                 ctx.fillText('📊 Top 10 Volumen de Publicaciones', bx + 30, by + 45);
                 
                 var maxPapers = barData[0].papers;
-                var maxBarWidth = 330; // Más espacio horizontal de despliegue para las barras
+                var maxBarWidth = 330; 
                 
                 for (var i = 0; i < barData.length; i++) {
                     var item = barData[i];
-                    var rowY = by + 90 + (i * 41); // Espacio vertical muy amplio por fila (evita encimado)
+                    var rowY = by + 90 + (i * 41); 
                     
-                    // Nombres de instituciones ampliados a 16px y con límite extendido de caracteres (32)
                     ctx.fillStyle = '#222222';
                     ctx.font = 'bold 16px sans-serif';
                     ctx.textAlign = 'left';
@@ -270,21 +267,19 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                     var barW = (item.papers / maxPapers) * maxBarWidth;
                     if (barW < 5) barW = 5;
                     
-                    // Relleno de las barras
                     ctx.fillStyle = item.color;
-                    ctx.fillRect(bx + 340, rowY, barW, 24); // Barras extra gruesas (24px de alto)
+                    ctx.fillRect(bx + 340, rowY, barW, 24); 
                     
-                    // Bordes de barras: Rojo llamativo para Top 5, negro fino para el resto
                     if (item.is_top5) {
                         ctx.strokeStyle = '#FF0000';
-                        ctx.lineWidth = 3.0; // Contorno rojo reforzado
+                        ctx.lineWidth = 3.0; 
                     } else {
                         ctx.strokeStyle = '#000000';
                         ctx.lineWidth = 0.8;
                     }
                     ctx.strokeRect(bx + 340, rowY, barW, 24);
                     
-                    # Número de volumen al final de la barra ampliado
+                    // CORRECCIÓN AQUÍ: Se cambió el comentario de # a // para evitar romper JS
                     ctx.fillStyle = '#444444';
                     ctx.font = 'bold 16px sans-serif';
                     ctx.fillText(item.papers, bx + 352 + barW, rowY + 17);
@@ -376,7 +371,7 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
             tooltip=['Institución', 'Papers']
         ).properties(
             width='container',
-            height=400  # Altura optimizada para la barra lateral en el navegador
+            height=400  
         )
         st.altair_chart(chart, use_container_width=True)
     else:
