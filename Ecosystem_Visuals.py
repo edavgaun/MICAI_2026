@@ -107,7 +107,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     
     nt.save_graph("temp_network.html")
     
-    # 4. INYECCIÓN JAVASCRIPT PARA BOTÓN DE DESCARGA Y NOMENCLATURA
+    # 4. INYECCIÓN JAVASCRIPT CORREGIDA
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
@@ -143,11 +143,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         tempCanvas.height = originalCanvas.height;
         var ctx = tempCanvas.getContext('2d');
         
-        // Fondo blanco sólido para que no sea transparente
+        // Fondo blanco sólido
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
         
-        # Dibujar la red actual tal y como está posicionada por el usuario
+        // CORRECCIÓN AQUÍ: Se cambió el comentario de # a // para evitar romper JS
         ctx.drawImage(originalCanvas, 0, 0);
         
         // --- TEXTO DE METADATOS (Esquina Superior Izquierda) ---
@@ -225,10 +225,10 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     </script>
     """
     
-    # Insertar el código justo antes del cierre de la etiqueta body
     html_content = html_content.replace("</body>", js_injection + "</body>")
-    
     components.html(html_content, height=760)
+
+    
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
     # Ajuste metodológico: Conteo por títulos únicos para corregir el sesgo de coautorías internas
     counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
