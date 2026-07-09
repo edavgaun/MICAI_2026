@@ -135,7 +135,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # 4. PLANTILLA DE EXPORTACIÓN CORREGIDA (Comentarios JS arreglados)
+    # 4. PLANTILLA DE EXPORTACIÓN OPTIMIZADA Y COMPACTA (550px de ancho)
     js_template = """
     <div id="download-container" style="position: absolute; top: 15px; right: 15px; z-index: 9999;">
         <button id="download-btn" style="
@@ -228,10 +228,10 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
             
-            // --- 📊 CONTENEDOR GIGANTE DE ALTA RESOLUCIÓN PARA BARRAS (Esquina Inferior Derecha) ---
+            // --- 📊 CONTENEDOR AJUSTADO PARA LAS BARRAS (Esquina Inferior Derecha) ---
             var barData = __BAR_DATA__;
             if (barData && barData.length > 0) {
-                var bWidth = 750;  
+                var bWidth = 550;  // Ancho optimizado (se redujo de 750 a 550)
                 var bHeight = 530; 
                 var bx = tempCanvas.width - bWidth - 35;
                 var by = tempCanvas.height - bHeight - 35;
@@ -246,11 +246,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                 }
                 
                 ctx.fillStyle = '#111111';
-                ctx.font = 'bold 24px sans-serif';
-                ctx.fillText('📊 Top 10 Volumen de Publicaciones', bx + 30, by + 45);
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText('📊 Top 10 Volumen de Publicaciones', bx + 25, by + 45);
                 
                 var maxPapers = barData[0].papers;
-                var maxBarWidth = 330; 
+                var maxBarWidth = 270; // Longitud proporcional de las barras
                 
                 for (var i = 0; i < barData.length; i++) {
                     var item = barData[i];
@@ -260,15 +260,17 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                     ctx.font = 'bold 16px sans-serif';
                     ctx.textAlign = 'left';
                     
+                    // Ajuste de texto: Máximo 18 caracteres para mantener todo pegado a la barra
                     var displayName = item.name;
-                    if (displayName.length > 32) displayName = displayName.substring(0, 30) + '...';
-                    ctx.fillText(displayName, bx + 30, rowY + 17);
+                    if (displayName.length > 18) displayName = displayName.substring(0, 16) + '...';
+                    ctx.fillText(displayName, bx + 25, rowY + 17);
                     
                     var barW = (item.papers / maxPapers) * maxBarWidth;
                     if (barW < 5) barW = 5;
                     
+                    // Dibujo de las barras compactadas hacia la izquierda (comienzan en bx + 170 en lugar de 340)
                     ctx.fillStyle = item.color;
-                    ctx.fillRect(bx + 340, rowY, barW, 24); 
+                    ctx.fillRect(bx + 170, rowY, barW, 24); 
                     
                     if (item.is_top5) {
                         ctx.strokeStyle = '#FF0000';
@@ -277,12 +279,12 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
                         ctx.strokeStyle = '#000000';
                         ctx.lineWidth = 0.8;
                     }
-                    ctx.strokeRect(bx + 340, rowY, barW, 24);
+                    ctx.strokeRect(bx + 170, rowY, barW, 24);
                     
-                    // CORRECCIÓN AQUÍ: Se cambió el comentario de # a // para evitar romper JS
+                    // Texto del valor numérico justo al terminar la barra
                     ctx.fillStyle = '#444444';
-                    ctx.font = 'bold 16px sans-serif';
-                    ctx.fillText(item.papers, bx + 352 + barW, rowY + 17);
+                    ctx.font = 'bold 15px sans-serif';
+                    ctx.fillText(item.papers, bx + 182 + barW, rowY + 17);
                 }
                 ctx.textAlign = 'left'; 
             }
