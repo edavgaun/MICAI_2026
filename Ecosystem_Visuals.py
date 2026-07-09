@@ -135,7 +135,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     with open("temp_network.html", 'r', encoding='utf-8') as f:
         html_content = f.read()
 
-    # 4. PLANTILLA DE EXPORTACIÓN CON MINI GRÁFICA DE BARRAS EN LA ESQUINA INFERIOR DERECHA
+    # 4. PLANTILLA DE EXPORTACIÓN CON UN CANVAS ALTA RESOLUCIÓN PARA LAS BARRAS (750x530)
     js_template = """
     <div id="download-container" style="position: absolute; top: 15px; right: 15px; z-index: 9999;">
         <button id="download-btn" style="
@@ -228,66 +228,68 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
             ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
             
-            // --- 📊 MINI GRÁFICA DE BARRAS INTEGRADA (Esquina Inferior Derecha) ---
+            // --- 📊 CONTENEDOR GIGANTE DE ALTA RESOLUCIÓN PARA BARRAS (Esquina Inferior Derecha) ---
             var barData = __BAR_DATA__;
             if (barData && barData.length > 0) {
-                var bWidth = 340;
-                var bHeight = 240;
+                var bWidth = 750;  // ¡Gran incremento de área para legibilidad cristalina!
+                var bHeight = 530; 
                 var bx = tempCanvas.width - bWidth - 35;
                 var by = tempCanvas.height - bHeight - 35;
                 
-                // Fondo del contenedor de barras
+                // Cuadro contenedor
                 ctx.fillStyle = '#f8f9fa';
                 ctx.strokeStyle = '#e0e0e0';
-                ctx.lineWidth = 1.5;
+                ctx.lineWidth = 2.0;
                 if (ctx.roundRect) {
-                    ctx.beginPath(); ctx.roundRect(bx, by, bWidth, bHeight, 10); ctx.fill(); ctx.stroke();
+                    ctx.beginPath(); ctx.roundRect(bx, by, bWidth, bHeight, 12); ctx.fill(); ctx.stroke();
                 } else {
                     ctx.fillRect(bx, by, bWidth, bHeight); ctx.strokeRect(bx, by, bWidth, bHeight);
                 }
                 
-                // Título del gráfico interno
-                ctx.fillStyle = '#222222';
-                ctx.font = 'bold 14px sans-serif';
-                ctx.fillText('📊 Top 10 Volumen', bx + 15, by + 25);
+                // Título de la sección de barras ampliado
+                ctx.fillStyle = '#111111';
+                ctx.font = 'bold 24px sans-serif';
+                ctx.fillText('📊 Top 10 Volumen de Publicaciones', bx + 30, by + 45);
                 
                 var maxPapers = barData[0].papers;
-                var maxBarWidth = 140; 
+                var maxBarWidth = 330; // Más espacio horizontal de despliegue para las barras
                 
-                ctx.font = '11px sans-serif';
                 for (var i = 0; i < barData.length; i++) {
                     var item = barData[i];
-                    var rowY = by + 45 + (i * 18);
+                    var rowY = by + 90 + (i * 41); // Espacio vertical muy amplio por fila (evita encimado)
                     
-                    // Texto de la Institución (Truncado de forma segura si es largo)
-                    ctx.fillStyle = '#333333';
+                    // Nombres de instituciones ampliados a 16px y con límite extendido de caracteres (32)
+                    ctx.fillStyle = '#222222';
+                    ctx.font = 'bold 16px sans-serif';
                     ctx.textAlign = 'left';
+                    
                     var displayName = item.name;
-                    if (displayName.length > 20) displayName = displayName.substring(0, 18) + '...';
-                    ctx.fillText(displayName, bx + 15, rowY + 10);
+                    if (displayName.length > 32) displayName = displayName.substring(0, 30) + '...';
+                    ctx.fillText(displayName, bx + 30, rowY + 17);
                     
-                    // Dibujo de la barra
                     var barW = (item.papers / maxPapers) * maxBarWidth;
-                    if (barW < 3) barW = 3;
+                    if (barW < 5) barW = 5;
                     
+                    // Relleno de las barras
                     ctx.fillStyle = item.color;
-                    ctx.fillRect(bx + 140, rowY, barW, 12);
+                    ctx.fillRect(bx + 340, rowY, barW, 24); // Barras extra gruesas (24px de alto)
                     
-                    // Borde condicional: Rojo grueso para Top 5, negro sutil para el resto
+                    // Bordes de barras: Rojo llamativo para Top 5, negro fino para el resto
                     if (item.is_top5) {
                         ctx.strokeStyle = '#FF0000';
-                        ctx.lineWidth = 1.8;
+                        ctx.lineWidth = 3.0; // Contorno rojo reforzado
                     } else {
                         ctx.strokeStyle = '#000000';
-                        ctx.lineWidth = 0.5;
+                        ctx.lineWidth = 0.8;
                     }
-                    ctx.strokeRect(bx + 140, rowY, barW, 12);
+                    ctx.strokeRect(bx + 340, rowY, barW, 24);
                     
-                    // Número indicador de papers al final de la barra
-                    ctx.fillStyle = '#555555';
-                    ctx.fillText(item.papers, bx + 146 + barW, rowY + 10);
+                    # Número de volumen al final de la barra ampliado
+                    ctx.fillStyle = '#444444';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText(item.papers, bx + 352 + barW, rowY + 17);
                 }
-                ctx.textAlign = 'left'; // Restaurar alineación estándar
+                ctx.textAlign = 'left'; 
             }
             
             // --- DISPARAR DESCARGA AUTOMÁTICA ---
@@ -344,14 +346,13 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     </script>
     """
     
-    # Inyección segura mediante reemplazos directos de texto controlado
     js_injection = js_template.replace("__SELECTED_YEAR__", str(selected_year)).replace("__DROPDOWN_AREA__", str(dropdown_area)).replace("__BAR_DATA__", js_bar_data_json)
     
     html_content = html_content.replace("</body>", js_injection + "</body>")
     components.html(html_content, height=760)
 
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
-    """Dibuja el gráfico de volumen de la UI de Streamlit remarcando el Top 5 con borde rojo."""
+    """Dibuja el gráfico de volumen de la UI de Streamlit a un tamaño estándar cómodo (400px)."""
     counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
     counts.columns = ['Institución', 'Papers']
     counts = counts.sort_values(by='Papers', ascending=False).head(10).reset_index(drop=True)
@@ -359,7 +360,6 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
     counts['Color'] = counts['Institución'].apply(lambda x: '#2ca02c' if institution_country_map.get(x, 'Unknown') == 'Mexico' else '#EBF6FF')
     counts['Opacity'] = counts['Institución'].apply(lambda x: 1.0 if not has_focus or x in focus_nodes else 0.15)
     
-    # 🔴 AGREGAR COLUMNAS DE BORDE CONDICIONAL PARA EL TOP 5 EN LA INTERFAZ ALTAIR
     counts['StrokeColor'] = '#000000'
     counts.loc[0:4, 'StrokeColor'] = '#FF0000'
     counts['StrokeWidth'] = 1.0
@@ -376,7 +376,7 @@ def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes
             tooltip=['Institución', 'Papers']
         ).properties(
             width='container',
-            height=350
+            height=400  # Altura optimizada para la barra lateral en el navegador
         )
         st.altair_chart(chart, use_container_width=True)
     else:
