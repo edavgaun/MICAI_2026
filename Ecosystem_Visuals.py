@@ -10,8 +10,8 @@ def calcular_metricas_periodo(df_periodo):
     """🧠 Almacena el conteo de papers en caché para evitar recalcular el groupby con cada filtro."""
     return df_periodo.groupby('institution_clean')['title'].nunique().to_dict()
 
-def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions):
-    """Dibuja la red interactiva con tamaños jerárquicos reales y físicas de separación ultrarápidas."""
+def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, focus_nodes, selected_institutions, selected_year, dropdown_area):
+    """Dibuja la red interactiva con tamaños jerárquicos reales y un botón para descargar como imagen con nomenclatura."""
     nt = Network(height="750px", width="100%", bgcolor="#ffffff", font_color="#333333")
     
     paper_count = calcular_metricas_periodo(df_periodo)
@@ -23,14 +23,11 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         is_mexico = country == "Mexico"
         p_count = paper_count.get(node_id, 1)
         
-        # 🛠️ AJUSTE DE TAMAÑO ESTRICTO: 
-        # Si tiene 1 paper, el tamaño será mínimo (8). Si es una macro-institución, crecerá de forma notable.
         if p_count == 1:
             size_value = 6
         else:
             size_value = 8 + (np.log1p(p_count) * 8)
         
-        # Posicionamiento inicial aproximado (Vis.js usará sus fuerzas a partir de aquí)
         if node_id in pos:
             x_pos = pos[node_id][0] * 250
             y_pos = pos[node_id][1] * 250
@@ -81,9 +78,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
             
         nt.add_edge(u, v, width=width_value, color=edge_color)
 
-    # 3. 🛠️ SOLUCIÓN AL AMONTONAMIENTO: FÍSICAS DE ESTABILIZACIÓN ULTRA-RÁPIDAS
-    # Activamos barnesHut pero obligamos al navegador a pre-calcular el ordenamiento 
-    # ANTES de pintar el lienzo, evitando retrasos en la carga y separando los nodos del centro.
+    # 3. FÍSICAS DE ESTABILIZACIÓN ULTRA-RÁPIDAS
     nt.set_options("""
     {
       "physics": {
@@ -97,7 +92,7 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
         },
         "stabilization": {
           "enabled": true,
-          "iterations": 200,
+          "iterations": 100,
           "updateInterval": 25
         }
       },
@@ -111,9 +106,129 @@ def draw_network_graph(G, pos, institution_country_map, df_periodo, has_focus, f
     """)
     
     nt.save_graph("temp_network.html")
+    
+    # 4. INYECCIÓN JAVASCRIPT PARA BOTÓN DE DESCARGA Y NOMENCLATURA
     with open("temp_network.html", 'r', encoding='utf-8') as f:
-        components.html(f.read(), height=760)
+        html_content = f.read()
 
+    js_injection = f"""
+    <div id="download-container" style="position: absolute; top: 15px; right: 15px; z-index: 9999;">
+        <button id="download-btn" style="
+            background-color: #ff4b4b; 
+            color: white; 
+            border: none; 
+            padding: 10px 18px; 
+            border-radius: 6px; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-size: 14px; 
+            cursor: pointer; 
+            font-weight: 600;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        " onmouseover="this.style.backgroundColor='#e03e3e'" onmouseout="this.style.backgroundColor='#ff4b4b'">
+            📸 Descargar Red (PNG)
+        </button>
+    </div>
+    <script>
+    document.getElementById('download-btn').addEventListener('click', function() {{
+        var originalCanvas = document.querySelector('canvas');
+        if (!originalCanvas) {{
+            alert('Error al acceder al lienzo del mapa.');
+            return;
+        }}
+        
+        // Crear un lienzo temporal para componer la imagen final
+        var tempCanvas = document.createElement('canvas');
+        tempCanvas.width = originalCanvas.width;
+        tempCanvas.height = originalCanvas.height;
+        var ctx = tempCanvas.getContext('2d');
+        
+        // Fondo blanco sólido para que no sea transparente
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        
+        # Dibujar la red actual tal y como está posicionada por el usuario
+        ctx.drawImage(originalCanvas, 0, 0);
+        
+        // --- TEXTO DE METADATOS (Esquina Superior Izquierda) ---
+        ctx.fillStyle = '#1e1e1e';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText('Ecosistema de IA en México', 35, 50);
+        
+        ctx.font = '15px sans-serif';
+        ctx.fillStyle = '#555555';
+        ctx.fillText('Año de corte: ' + "{selected_year}", 35, 80);
+        ctx.fillText('Área de Investigación: ' + "{dropdown_area}", 35, 105);
+        
+        // --- CUADRO DE LEYENDA / NOMENCLATURA (Esquina Inferior Izquierda) ---
+        var boxWidth = 280;
+        var boxHeight = 180;
+        var x = 35;
+        var y = tempCanvas.height - boxHeight - 35;
+        
+        // Fondo del cuadro
+        ctx.fillStyle = '#f8f9fa';
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 1.5;
+        if (ctx.roundRect) {{
+            ctx.beginPath(); ctx.roundRect(x, y, boxWidth, boxHeight, 10); ctx.fill(); ctx.stroke();
+        }} else {{
+            ctx.fillRect(x, y, boxWidth, boxHeight); ctx.strokeRect(x, y, boxWidth, boxHeight);
+        }}
+        
+        // Título de la Guía
+        ctx.fillStyle = '#222222';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('📍 Guía de la Red', x + 15, y + 28);
+        
+        // Línea decorativa verde
+        ctx.strokeStyle = '#2ca02c';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(x + 15, y + 36); ctx.lineTo(x + 130, y + 36); ctx.stroke();
+        
+        ctx.font = '13px sans-serif';
+        
+        // Nodo México
+        ctx.fillStyle = '#2ca02c';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x + 25, y + 60, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#333333'; ctx.fillText('Institución México', x + 45, y + 64);
+        
+        // Nodo Extranjero
+        ctx.fillStyle = '#EBF6FF';
+        ctx.beginPath(); ctx.arc(x + 25, y + 82, 7, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#333333'; ctx.fillText('Institución Extranjero', x + 45, y + 86);
+        
+        // Arista Nacional (Mx-Mx)
+        ctx.strokeStyle = 'rgba(44, 160, 44, 0.8)'; ctx.lineWidth = 3.5;
+        ctx.beginPath(); ctx.moveTo(x + 15, y + 112); ctx.lineTo(x + 35, y + 112); ctx.stroke();
+        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Nacional (Mx-Mx)', x + 45, y + 116);
+        
+        // Arista Internacional (Mx-Ext)
+        ctx.strokeStyle = 'rgba(255, 127, 14, 0.8)';
+        ctx.beginPath(); ctx.moveTo(x + 15, y + 134); ctx.lineTo(x + 35, y + 134); ctx.stroke();
+        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Internacional (Mx-Ext)', x + 45, y + 138);
+        
+        // Arista Global (Ext-Ext)
+        ctx.strokeStyle = 'rgba(211, 211, 211, 0.7)';
+        ctx.beginPath(); ctx.moveTo(x + 15, y + 156); ctx.lineTo(x + 35, y + 156); ctx.stroke();
+        ctx.fillStyle = '#333333'; ctx.fillText('Colaboración Global (Ext-Ext)', x + 45, y + 160);
+        
+        // --- DETONAR DESCARGA ---
+        var safeAreaName = "{dropdown_area}".replace(/[^a-zA-Z0-9]/g, "_");
+        var link = document.createElement('a');
+        link.download = 'Red_IA_Mexico_' + "{selected_year}" + '_' + safeAreaName + '.png';
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+    }});
+    </script>
+    """
+    
+    # Insertar el código justo antes del cierre de la etiqueta body
+    html_content = html_content.replace("</body>", js_injection + "</body>")
+    
+    components.html(html_content, height=760)
 def draw_volume_bars(df_periodo, institution_country_map, has_focus, focus_nodes):
     # Ajuste metodológico: Conteo por títulos únicos para corregir el sesgo de coautorías internas
     counts = df_periodo.groupby('institution_clean')['title'].nunique().reset_index()
