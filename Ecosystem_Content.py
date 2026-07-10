@@ -1,28 +1,26 @@
-APP_TITLE = "🕸️ Collaboration Network Discovery"
-APP_SUBTITLE = "Explora la evolución del ecosistema de IA en México año por año."
-BAR_CHART_TITLE = "### 📊 Top 10 Volumen"
-EMPTY_DATA_WARNING = "No se encontraron datos para la combinación seleccionada."
+APP_TITLE = "🕸️ Mexican AI Core-Periphery Network"
+APP_SUBTITLE = "Análisis estructural y longitudinal del ecosistema de IA en México (2000–2025)."
+BAR_CHART_TITLE = "### 📊 Top 10 Volumen e Impacto Estructural"
+EMPTY_DATA_WARNING = "No se encontraron datos para la combinación o año seleccionado."
 
 def obtener_info_era(year):
-    """Devuelve el nombre de la era basado en el año seleccionado."""
-    if year <= 2008:
-        return "Era 1: The Islands (1997–2008)"
-    elif year <= 2019:
-        return "Era 2: The Bridges (2009–2019)"
+    """Devuelve el nombre de la era basado en los hitos e inflexiones del paper."""
+    if year <= 2007:
+        return "Era 1: Formación y Expansión Inicial (2000–2007)"
+    elif year <= 2012:
+        return "Era 2: Choques Externos y Consolidación del Núcleo (2008–2012)"
     elif year <= 2022:
-        return "Era 3: Forced Virtualization (2020–2022)"
+        return "Era 3: Crecimiento Asimétrico y Alta Transitividad (2013–2022)"
     else:
-        return "Era 4: Solid Networks (2023–2026)"
+        return "Era 4: Frontera Generativa y Retos de Cohesión (2023–2025)"
 
-# El texto de Home se mantiene igual
-HOME_TITLE = "🇲🇽 Mexico's AI Ecosystem Timeline"
+# Ajuste de la sección Home al marco científico del paper
+HOME_TITLE = "🇲🇽 Core-Periphery Structure of Mexican AI Research Institutions"
 HOME_INTRO = """
-Bienvenido al mapa interactivo de investigación y colaboración de Inteligencia Artificial en México.
-Utiliza la línea de tiempo para ver cómo la red crece y se conecta año con año.
+Bienvenido a la plataforma interactiva del ecosistema de Inteligencia Artificial en México. 
+Explora cómo la acumulación de lazos científicos revela una estructura de núcleo denso (IPN, ITESM, CINVESTAV, UNAM, TecNM, INAOE) 
+frente a una periferia fragmentada, evaluada rigurosamente mediante modelos nulos de preservación de grado.
 """
-
-
-# ... (mantiene lo anterior)
 
 LEGEND_HTML = """
 <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 20px; font-family: sans-serif;">
@@ -31,13 +29,13 @@ LEGEND_HTML = """
         <p style="font-size: 0.9rem; font-weight: bold; margin-bottom: 8px;">Instituciones (Nodos):</p>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 15px; height: 15px; background-color: #2ca02c; border-radius: 50%; margin-right: 10px; border: 1px solid #000;"></div>
-            <span style="font-size: 0.85rem;">México</span>
+            <span style="font-size: 0.85rem;">México (Núcleo o Periferia)</span>
         </div>
         <div style="display: flex; align-items: center; margin-bottom: 5px;">
             <div style="width: 15px; height: 15px; background-color: #EBF6FF; border-radius: 50%; margin-right: 10px; border: 1px solid #000;"></div>
             <span style="font-size: 0.85rem;">Extranjero</span>
         </div>
-        <p style="font-size: 0.75rem; color: #666; font-style: italic;">* El tamaño representa el volumen de papers.</p>
+        <p style="font-size: 0.75rem; color: #666; font-style: italic;">* El tamaño del nodo representa su volumen de publicaciones en el corpus.</p>
     </div>
     <div>
         <p style="font-size: 0.9rem; font-weight: bold; margin-bottom: 8px;">Colaboraciones (Aristas):</p>
